@@ -1,7 +1,9 @@
+import pytest
 from sqlalchemy import create_engine, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from mailbrain.storage.models import Base, Label, Message, Mutation, Run
+from mailbrain.storage.models import Base, Digest, Label, Message, Mutation, Run
 
 
 def _engine():
@@ -67,3 +69,14 @@ def test_message_defaults():
         assert m is not None
         assert m.subject is None
         assert m.history_id is None
+
+
+def test_digest_iso_week_unique():
+    engine = _engine()
+    with Session(engine) as s:
+        s.add(Digest(iso_week="2026-W28"))
+        s.commit()
+    with Session(engine) as s:
+        s.add(Digest(iso_week="2026-W28"))
+        with pytest.raises(IntegrityError):
+            s.commit()

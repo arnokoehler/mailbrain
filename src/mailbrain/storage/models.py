@@ -73,7 +73,7 @@ class Digest(Base):
     __tablename__ = "digests"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    iso_week: Mapped[str] = mapped_column()  # e.g. "2026-W28"
+    iso_week: Mapped[str] = mapped_column(unique=True)  # one digest per ISO week, e.g. "2026-W28"
     notion_page_id: Mapped[str | None] = mapped_column(default=None)
     created_at: Mapped[datetime | None] = mapped_column(default=None)
 
@@ -91,8 +91,14 @@ class ReviewQueue(Base):
 
 
 class SyncState(Base):
+    """Singleton row holding the Gmail incremental-scan cursor.
+
+    The application maintains exactly one row here (id=1); code should
+    upsert rather than insert new rows.
+    """
+
     __tablename__ = "sync_state"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True, default=1)
     last_history_id: Mapped[str | None] = mapped_column(default=None)
     updated_at: Mapped[datetime | None] = mapped_column(default=None)
