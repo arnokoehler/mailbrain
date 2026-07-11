@@ -1,0 +1,91 @@
+rules:
+  - id: booking-payment
+    match:
+      from_domain: [booking.com]
+      subject_contains: [payment received, receipt]
+    actions:
+      add_labels: [Reizen]
+      archive: true
+
+  - id: campings
+    match:
+      subject_contains: [camping, campsite]
+    actions:
+      add_labels: [Reizen]
+      archive: true
+
+  - id: password-reset
+    match:
+      subject_regex: ["(?i)password reset"]
+      older_than_days: 3
+    actions:
+      add_labels: [to-be-removed]
+      archive: true
+      mark_read: true
+
+  - id: android-weekly
+    match:
+      subject_contains: [Android Weekly]
+    actions:
+      add_labels: [to-be-removed]
+      archive: true
+
+  - id: bnnvara-newsletter
+    match:
+      from_domain: [bnnvara.nl]
+    actions:
+      add_labels: [to-be-removed]
+      archive: true
+
+  - id: follow-this
+    match:
+      subject_contains: [Follow This]
+    actions:
+      add_labels: [to-be-removed]
+      archive: true
+
+  - id: social-schools
+    match:
+      from_domain: [socialschools.nl]
+    actions:
+      add_labels: [to-be-removed]
+      archive: true
+
+  - id: library-newsletter
+    match:
+      subject_contains: [bibliotheek, library]
+    actions:
+      add_labels: [to-be-removed]
+      archive: true
+
+  - id: jcrete
+    match:
+      subject_contains: [JCrete, Heinz Kabutz]
+    actions:
+      add_labels: [JCrete]
+
+  - id: bux-reports
+    match:
+      from_domain: [getbux.com]
+    actions:
+      add_labels: [Beleggen]
+      archive: true
+
+  - id: degiro
+    match:
+      from_domain: [degiro.nl]
+    actions:
+      add_labels: [Beleggen/deGiro]
+      archive: true
+
+  - id: home-utilities
+    match:
+      subject_contains: [energie, internet, factuur]
+    actions:
+      add_labels: [Albrecht Thaerlaan 57]
+
+  - id: orders-invoices
+    match:
+      subject_contains: [order, invoice, factuur, bestelling]
+    actions:
+      add_labels: [Administratie/Aankopen]

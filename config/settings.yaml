@@ -1,0 +1,13 @@
+gmail:
+  scan_query: "in:inbox"
+  page_size: 500
+  batch_size: 1000
+
+ai:
+  enabled: false        # Phase 1 = rules only; Mistral enabled in Phase 2
+  provider: mistral
+  confidence_floor: 0.85
+
+notion:
+  enabled: false        # digest wired up in Phase 1c
+  parent_page: "Personal/Mail System/Weekly Digest"
