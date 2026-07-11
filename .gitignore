@@ -8,3 +8,6 @@ __pycache__/
 dist/
 .coverage
 htmlcov/
+.idea/
+.vscode/
+.DS_Store

@@ -1,5 +1,4 @@
 from sqlalchemy import inspect
-
 from typer.testing import CliRunner
 
 from mailbrain.cli import app
