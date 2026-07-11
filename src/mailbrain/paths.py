@@ -36,6 +36,6 @@ def cache_dir() -> Path:
 def ensure_app_dir() -> Path:
     root = app_dir()
     root.mkdir(parents=True, exist_ok=True)
-    reports_dir().mkdir(exist_ok=True)
-    cache_dir().mkdir(exist_ok=True)
+    (root / "reports").mkdir(exist_ok=True)
+    (root / "cache").mkdir(exist_ok=True)
     return root

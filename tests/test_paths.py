@@ -19,6 +19,7 @@ def test_derived_paths(monkeypatch, tmp_path):
     assert paths.credentials_path() == tmp_path / "credentials.json"
     assert paths.token_path() == tmp_path / "token.json"
     assert paths.reports_dir() == tmp_path / "reports"
+    assert paths.cache_dir() == tmp_path / "cache"
 
 
 def test_ensure_app_dir_creates_tree(monkeypatch, tmp_path):
