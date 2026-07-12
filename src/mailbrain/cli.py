@@ -59,6 +59,13 @@ def scan(
     query: str = typer.Option("in:inbox", "--query", help="Gmail search query."),
 ) -> None:
     """Fetch Gmail metadata for the query and cache it locally."""
+    if not paths.credentials_path().exists():
+        console.print(
+            f"[red]credentials.json not found:[/] {paths.credentials_path()}\n"
+            "Download an OAuth desktop client from Google Cloud Console and save it there "
+            "(see README)."
+        )
+        raise typer.Exit(code=2)
     creds = load_credentials(paths.credentials_path(), paths.token_path())
     service = build_service(creds)
     client = GmailClient(service)
