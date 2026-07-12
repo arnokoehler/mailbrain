@@ -11,3 +11,9 @@ htmlcov/
 .idea/
 .vscode/
 .DS_Store
+
+# Secrets & local state — never commit (real files live in ~/.mailbrain)
+credentials.json
+token.json
+*.db
+.mailbrain/
