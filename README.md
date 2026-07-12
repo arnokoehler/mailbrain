@@ -19,10 +19,23 @@ uv sync
 uv run mailbrain init      # creates ~/.mailbrain/ and state.db
 ```
 
+## Commands
+
+```bash
+mailbrain init                         # create ~/.mailbrain/ and the SQLite db
+mailbrain scan  [--query "in:inbox"]   # fetch Gmail metadata into the local cache
+mailbrain classify [--rules config/rules.yaml]  # dry-run: print what WOULD change
+```
+
+- `scan` needs `~/.mailbrain/credentials.json` (see below) and does a live,
+  read-only fetch — it never modifies mail.
+- `classify` runs fully offline on the cached data and only prints a plan;
+  nothing is applied. Applying changes (`apply`) and rollback arrive in Plan 1c.
+
 ## Gmail API credentials (manual, one-time)
 
 MailBrain needs an OAuth **Desktop** client. This step is manual — do it once
-before running `mailbrain auth` (auth command lands in Plan 1b):
+before running `mailbrain scan`:
 
 1. Open the [Google Cloud Console](https://console.cloud.google.com/).
 2. Create a project (or pick one).

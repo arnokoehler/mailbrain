@@ -21,6 +21,14 @@ Covers v0.1 milestones 5–7 (Gmail scanner, rule engine, dry-run reporting). **
 - **Full-list scan** using `users.messages.list` + batched metadata `get`. Incremental `historyId` sync is deferred (a later optimization; `sync_state` table already exists).
 - Carry-over from 1a: `subject_regex` patterns are validated at config load (added here, Task 4).
 
+## Notes carried to Plan 1c (from Phase 1b review)
+
+- **Label name→ID resolution + creation belongs in `apply`.** `PlannedMutation.add_labels` carries label *names* (from rules YAML). Gmail's `messages.modify` needs label *IDs*. Per design v0.2, 1c's `apply` must resolve names→IDs via the `Label` cache and **auto-create missing (nested) labels first**, updating the cache. This is intended, not rework — but apply must not assume every rule label already has a `gmail_id`.
+- **`Label.name` is no longer unique** (dropped in 1b for rename-safety). The name→ID reverse lookup in apply must handle the (rare) duplicate-name case deterministically.
+- **Missing `internalDate` → epoch 1970.** `GmailClient.get_metadata` defaults absent `internalDate` to `"0"` → 1970, which spuriously satisfies `older_than_days`. Real `in:inbox` messages always have it, so this only affects edge cases (e.g. drafts). 1c/scan hardening: treat missing as a skip or warn rather than epoch.
+- **Label name matching is case-sensitive** in the planner (`label not in current`). If rules YAML casing differs from the Gmail label's actual case, the planner re-emits the add every run. Document that rule label names must match Gmail casing, or normalise.
+- **Stale label ID leak:** if a Gmail label is deleted/renamed between `list_labels` and use, `load_cached` falls back to the raw ID as the "name". Harmless in the dry-run path; apply should tolerate it.
+
 ## File Structure
 
 - `src/mailbrain/gmail/backoff.py` — `with_backoff(fn, ...)` retry helper for transient API errors. Pure, injectable `sleep`.
