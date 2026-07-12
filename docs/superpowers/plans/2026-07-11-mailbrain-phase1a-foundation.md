@@ -14,6 +14,15 @@
 
 Covers v0.1 milestones 1–4: skeleton, configuration, SQLite storage, Gmail authentication. Excludes scan, rules, apply, rollback, digest (Plan 1b/1c) and all AI (Phase 2). Deletion is never implemented (per design v0.2). Gmail scope is `gmail.modify` (read + label + archive, no delete).
 
+## Notes carried to Plan 1b (from Phase 1a review)
+
+These surfaced during Phase 1a review and are intentionally deferred to 1b, where the consuming code lives:
+
+- **`SyncState` is a singleton.** `models.py` documents that exactly one row (`id=1`) holds the Gmail incremental-scan cursor. 1b's cursor-update code MUST upsert with an explicit `id=1` (e.g. `session.merge(SyncState(id=1, ...))`) — a bare `INSERT` without `id` would autoincrement and create a second row, causing history replay. The Python-side `default=1` does not enforce this at the SQL level.
+- **Regex rule validation.** `RuleMatch.subject_regex` patterns are not compiled at load time in 1a. When 1b builds the rules engine, add a `@field_validator` that `re.compile`s each pattern so a bad regex fails at config-load, not mid-apply.
+- **Rule load error messages.** `load_rules` raises a raw Pydantic `ValidationError` on a malformed rule. 1b should wrap it to name the offending rule `id` for a friendlier message.
+- **Refresh hardening (done in 1a):** `load_credentials` already falls back to a fresh OAuth flow if `creds.refresh()` raises, so a revoked/expired refresh token cannot wedge the tool. The live `auth` command that calls this lands in 1b.
+
 ## File Structure
 
 - `pyproject.toml` — project metadata, deps, tool config (ruff/mypy/pytest).
