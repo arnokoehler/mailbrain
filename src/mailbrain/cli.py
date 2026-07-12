@@ -14,6 +14,7 @@ from mailbrain.gmail.auth import build_service, load_credentials
 from mailbrain.gmail.client import GmailClient
 from mailbrain.planner import plan_mutations
 from mailbrain.report import render_metrics, render_plan, summarize
+from mailbrain.rollback import rollback_run
 from mailbrain.rules.engine import classify as classify_messages
 from mailbrain.scan import load_cached, scan_mailbox
 from mailbrain.storage.db import init_db, session_factory
@@ -111,6 +112,18 @@ def apply(
     client = GmailClient(build_service(creds))
     run_id = execute_plan(client, factory, plans, current)
     console.print(f"[green]Applied[/] {len(plans)} changes (run {run_id}).")
+
+
+@app.command()
+def rollback(run_id: int = typer.Argument(..., help="The run id to reverse.")) -> None:
+    """Reverse every mutation made by a previous run."""
+    if not paths.credentials_path().exists():
+        console.print(f"[red]credentials.json not found:[/] {paths.credentials_path()}")
+        raise typer.Exit(code=2)
+    creds = load_credentials(paths.credentials_path(), paths.token_path())
+    client = GmailClient(build_service(creds))
+    count = rollback_run(client, session_factory(paths.db_path()), run_id)
+    console.print(f"[green]Rolled back[/] {count} messages from run {run_id}.")
 
 
 if __name__ == "__main__":
