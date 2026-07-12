@@ -1,18 +1,23 @@
-"""Thin wrapper over the Gmail REST service (metadata reads only)."""
+"""Thin wrapper over the Gmail REST service (metadata reads + label writes)."""
 
 from __future__ import annotations
 
+import time
+from collections.abc import Callable
 from typing import Any
+
+from mailbrain.gmail.backoff import with_backoff
 
 USER_ID = "me"
 _METADATA_HEADERS = ["From", "Subject"]
 
 
 class GmailClient:
-    """Read-only Gmail access used by the scanner. I/O boundary — mock in tests."""
+    """Gmail access used by the scanner and applier. I/O boundary — mock in tests."""
 
-    def __init__(self, service: Any) -> None:
+    def __init__(self, service: Any, sleep: Callable[[float], None] = time.sleep) -> None:
         self._service = service
+        self._sleep = sleep
 
     def list_message_ids(self, query: str) -> list[str]:
         api = self._service.users().messages()
@@ -64,7 +69,10 @@ class GmailClient:
             "labelListVisibility": "labelShow",
             "messageListVisibility": "show",
         }
-        created = self._service.users().labels().create(userId=USER_ID, body=body).execute()
+        created = with_backoff(
+            lambda: self._service.users().labels().create(userId=USER_ID, body=body).execute(),
+            sleep=self._sleep,
+        )
         return created["id"]  # type: ignore[no-any-return]
 
     def batch_modify(
@@ -79,4 +87,10 @@ class GmailClient:
             "addLabelIds": add_label_ids,
             "removeLabelIds": remove_label_ids,
         }
-        self._service.users().messages().batchModify(userId=USER_ID, body=body).execute()
+        with_backoff(
+            lambda: self._service.users()
+            .messages()
+            .batchModify(userId=USER_ID, body=body)
+            .execute(),
+            sleep=self._sleep,
+        )
