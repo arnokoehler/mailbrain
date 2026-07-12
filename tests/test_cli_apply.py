@@ -89,3 +89,14 @@ def test_apply_execute_calls_executor(monkeypatch, tmp_path):
     assert captured["client"] == "CLIENT"
     assert captured["n"] == 1
     assert "42" in result.output
+
+
+def test_apply_execute_missing_credentials_errors(monkeypatch, tmp_path):
+    home = tmp_path / "mb"
+    monkeypatch.setenv("MAILBRAIN_HOME", str(home))
+    home.mkdir(parents=True)
+    _seed(home)
+
+    result = runner.invoke(app, ["apply", "--rules", str(_rules(tmp_path)), "--execute"])
+    assert result.exit_code == 2
+    assert "credentials.json not found" in result.output

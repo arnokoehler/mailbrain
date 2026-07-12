@@ -101,7 +101,11 @@ def apply(
         return
 
     if not paths.credentials_path().exists():
-        console.print(f"[red]credentials.json not found:[/] {paths.credentials_path()}")
+        console.print(
+            f"[red]credentials.json not found:[/] {paths.credentials_path()}\n"
+            "Download an OAuth desktop client from Google Cloud Console and save it there "
+            "(see README)."
+        )
         raise typer.Exit(code=2)
     creds = load_credentials(paths.credentials_path(), paths.token_path())
     client = GmailClient(build_service(creds))
