@@ -1,4 +1,4 @@
-from mailbrain.planner import PlannedMutation, plan_mutations
+from mailbrain.planner import plan_mutations
 from mailbrain.rules.models import Classification
 
 
