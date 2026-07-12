@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from datetime import datetime
 from email.utils import parseaddr
 
 from mailbrain.config import Rule, RuleMatch
-from mailbrain.rules.models import MessageMeta
+from mailbrain.rules.models import Classification, MessageMeta
 
 
 def _sender_domain(sender: str) -> str:
@@ -63,3 +64,36 @@ def rule_matches(rule: Rule, msg: MessageMeta, now: datetime) -> bool:
             return False
 
     return True
+
+
+def classify(
+    messages: Iterable[MessageMeta], rules: list[Rule], now: datetime
+) -> list[Classification]:
+    """Classify each message against all rules.
+
+    Labels from every matching rule are unioned (deduped, sorted). Boolean
+    actions are OR-combined (any matching rule requesting the action wins).
+    Messages that match no rule are omitted from the result.
+    """
+    results: list[Classification] = []
+    for msg in messages:
+        matched = [r for r in rules if rule_matches(r, msg, now)]
+        if not matched:
+            continue
+        labels: set[str] = set()
+        archive = False
+        mark_read = False
+        for r in matched:
+            labels.update(r.actions.add_labels)
+            archive = archive or r.actions.archive
+            mark_read = mark_read or r.actions.mark_read
+        results.append(
+            Classification(
+                gmail_id=msg.gmail_id,
+                matched_rule_ids=tuple(r.id for r in matched),
+                add_labels=tuple(sorted(labels)),
+                archive=archive,
+                mark_read=mark_read,
+            )
+        )
+    return results
