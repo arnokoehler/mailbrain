@@ -61,3 +61,13 @@ def test_rule_match_defaults_empty(tmp_path):
     assert rule.match.older_than_days == 3
     assert rule.match.from_domain == []
     assert rule.actions.archive is False
+
+
+def test_load_settings_missing_file_returns_defaults(tmp_path):
+    s = config.load_settings(tmp_path / "does_not_exist.yaml")
+    assert s.ai.provider == "mistral"
+
+
+def test_load_rules_missing_file_returns_empty(tmp_path):
+    rf = config.load_rules(tmp_path / "nope.yaml")
+    assert rf.rules == []

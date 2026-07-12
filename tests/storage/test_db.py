@@ -10,7 +10,16 @@ def test_init_db_creates_file_and_tables(tmp_path):
     assert p.exists()
     engine = db.make_engine(p)
     tables = set(inspect(engine).get_table_names())
-    assert {"messages", "labels", "runs", "mutations"} <= tables
+    assert {
+        "messages",
+        "threads",
+        "labels",
+        "runs",
+        "mutations",
+        "digests",
+        "review_queue",
+        "sync_state",
+    } <= tables
 
 
 def test_session_factory_roundtrip(tmp_path):

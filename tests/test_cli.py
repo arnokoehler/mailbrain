@@ -20,6 +20,7 @@ def test_init_creates_app_dir_and_db(monkeypatch, tmp_path):
 
     engine = db.make_engine(home / "state.db")
     assert "labels" in set(inspect(engine).get_table_names())
+    assert (home / "cache").is_dir()
 
 
 def test_init_is_idempotent(monkeypatch, tmp_path):

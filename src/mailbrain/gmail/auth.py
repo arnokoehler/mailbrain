@@ -26,11 +26,15 @@ def load_credentials(credentials_path: Path, token_path: Path) -> Credentials:
         return creds
 
     if creds and creds.expired and creds.refresh_token:
-        creds.refresh(Request())  # type: ignore[no-untyped-call]
-    else:
-        flow = InstalledAppFlow.from_client_secrets_file(str(credentials_path), SCOPES)
-        creds = flow.run_local_server(port=0)
+        try:
+            creds.refresh(Request())  # type: ignore[no-untyped-call]
+            token_path.write_text(creds.to_json())  # type: ignore[no-untyped-call]
+            return creds
+        except Exception:  # noqa: BLE001 - any refresh failure -> re-auth from scratch
+            creds = None
 
+    flow = InstalledAppFlow.from_client_secrets_file(str(credentials_path), SCOPES)
+    creds = flow.run_local_server(port=0)
     token_path.write_text(creds.to_json())
     return creds
 

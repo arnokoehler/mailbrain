@@ -60,8 +60,8 @@ class Mutation(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     run_id: Mapped[int] = mapped_column(ForeignKey("runs.id"))
     message_gmail_id: Mapped[str] = mapped_column()
-    labels_before: Mapped[str] = mapped_column(default="[]")  # JSON array
-    labels_after: Mapped[str] = mapped_column(default="[]")  # JSON array
+    labels_before: Mapped[str] = mapped_column(default="[]", server_default="[]")  # JSON array
+    labels_after: Mapped[str] = mapped_column(default="[]", server_default="[]")  # JSON array
     archived_before: Mapped[bool | None] = mapped_column(default=None)
     archived_after: Mapped[bool | None] = mapped_column(default=None)
     read_before: Mapped[bool | None] = mapped_column(default=None)

@@ -1,5 +1,8 @@
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
 from mailbrain import config
 
 CONFIG_DIR = Path(__file__).resolve().parents[1] / "config"
@@ -20,9 +23,17 @@ def test_default_rules_load_and_are_nonempty():
         assert r.actions.add_labels or r.actions.archive or r.actions.mark_read
 
 
-def test_no_rule_requests_deletion():
-    # Design v0.2: the tool never deletes. Rules only label/archive/mark_read.
-    rf = config.load_rules(CONFIG_DIR / "rules.yaml")
-    for r in rf.rules:
-        assert not hasattr(r.actions, "trash")
-        assert not hasattr(r.actions, "delete")
+def test_rule_actions_reject_unknown_action(tmp_path):
+    # Design v0.2: the tool never deletes. Unknown actions like `trash` must be
+    # REJECTED (not silently dropped) so a delete action can never sneak in.
+    p = tmp_path / "rules.yaml"
+    p.write_text(
+        "rules:\n"
+        "  - id: sneaky\n"
+        "    match:\n"
+        "      from_domain: [x.com]\n"
+        "    actions:\n"
+        "      trash: true\n"
+    )
+    with pytest.raises(ValidationError):
+        config.load_rules(p)

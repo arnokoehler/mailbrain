@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class GmailSettings(BaseModel):
@@ -33,6 +33,8 @@ class Settings(BaseModel):
 
 
 class RuleMatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     from_domain: list[str] = Field(default_factory=list)
     subject_contains: list[str] = Field(default_factory=list)
     subject_regex: list[str] = Field(default_factory=list)
@@ -40,6 +42,8 @@ class RuleMatch(BaseModel):
 
 
 class RuleActions(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     add_labels: list[str] = Field(default_factory=list)
     archive: bool = False
     mark_read: bool = False
@@ -56,6 +60,8 @@ class RulesFile(BaseModel):
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
     data = yaml.safe_load(path.read_text())
     return data if isinstance(data, dict) else {}
 

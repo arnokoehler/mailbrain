@@ -119,3 +119,33 @@ def test_refresh_persists_token(tmp_path):
         auth.load_credentials(tmp_path / "credentials.json", token)
 
     assert token.read_text() == '{"token": "refreshed"}'
+
+
+def test_refresh_failure_falls_back_to_fresh_flow(tmp_path):
+    token = tmp_path / "token.json"
+    token.write_text("{}")
+    stale = MagicMock()
+    stale.valid = False
+    stale.expired = True
+    stale.refresh_token = "r"
+    stale.refresh.side_effect = Exception("revoked")
+
+    new_creds = MagicMock()
+    new_creds.to_json.return_value = '{"token": "reauth"}'
+    flow_instance = MagicMock()
+    flow_instance.run_local_server.return_value = new_creds
+
+    with (
+        patch.object(auth.Credentials, "from_authorized_user_file", return_value=stale),
+        patch.object(auth, "Request"),
+        patch.object(
+            auth.InstalledAppFlow,
+            "from_client_secrets_file",
+            return_value=flow_instance,
+        ) as from_secrets,
+    ):
+        result = auth.load_credentials(tmp_path / "credentials.json", token)
+
+    from_secrets.assert_called_once()
+    assert result is new_creds
+    assert token.read_text() == '{"token": "reauth"}'
