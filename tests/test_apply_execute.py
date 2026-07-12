@@ -70,3 +70,22 @@ def test_execute_plan_empty_plans_no_calls(tmp_path):
     client.batch_modify.assert_not_called()
     with factory() as s:
         assert s.get(Run, run_id) is not None
+
+
+def test_execute_plan_archive_does_not_create_system_label(tmp_path):
+    dbp = tmp_path / "state.db"
+    db.init_db(dbp)
+    factory = db.session_factory(dbp)
+    # Intentionally do NOT seed an INBOX Label row.
+    client = MagicMock()
+    plans = [
+        PlannedMutation(gmail_id="m1", add_labels=(), archive=True, mark_read=False),
+    ]
+    current = {"m1": {"INBOX"}}
+
+    execute_plan(client, factory, plans, current)
+
+    client.create_label.assert_not_called()  # removing INBOX must not create it
+    _, kwargs = client.batch_modify.call_args
+    assert kwargs["remove_label_ids"] == ["INBOX"]
+    assert kwargs["add_label_ids"] == []

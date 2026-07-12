@@ -1,6 +1,7 @@
 """Apply planned mutations to Gmail with a persisted audit trail.
 
-Pure helpers here; the orchestrating executor is added in the next task.
+Pure set-diff helpers plus the `execute_plan` orchestrator. Every change is a
+before->after label-name set; archive removes INBOX, mark-read removes UNREAD.
 """
 
 from __future__ import annotations
@@ -60,6 +61,15 @@ def _resolve_ids(
     return frozenset(ensure_label(client, session, name, cache) for name in names)
 
 
+def _resolve_existing_ids(names: set[str], cache: dict[str, str]) -> frozenset[str]:
+    """Resolve names to ids WITHOUT creating anything.
+
+    Labels being removed already exist; system labels (INBOX/UNREAD) are their
+    own ids and may not be in the cache, so fall back to the name itself.
+    """
+    return frozenset(cache.get(name, name) for name in names)
+
+
 def execute_plan(
     client: SupportsApply,
     session_factory: sessionmaker[Session],
@@ -83,7 +93,7 @@ def execute_plan(
             if not add_names and not remove_names:
                 continue
             add_ids = _resolve_ids(add_names, client, session, cache)
-            remove_ids = _resolve_ids(remove_names, client, session, cache)
+            remove_ids = _resolve_existing_ids(remove_names, cache)
             entries.append((plan.gmail_id, add_ids, remove_ids))
             session.add(
                 Mutation(
@@ -103,6 +113,8 @@ def execute_plan(
             if INBOX in before and INBOX not in after:
                 archived += 1
 
+        # Gmail writes happen before the commit below. If the commit fails after a
+        # partial write, apply's idempotent desired-state diff lets a re-run finish.
         for (add_ids, remove_ids), message_ids in group_operations(entries).items():
             for batch in chunk(message_ids, BATCH_SIZE):
                 client.batch_modify(
