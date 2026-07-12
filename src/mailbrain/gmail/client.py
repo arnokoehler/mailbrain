@@ -25,6 +25,13 @@ class GmailClient:
         return ids
 
     def get_metadata(self, message_id: str) -> dict[str, Any]:
+        """Fetch one message's metadata.
+
+        Returns a dict with keys:
+          gmail_id: str, thread_id: str | None, snippet: str | None,
+          sender: str, subject: str, label_ids: list[str],
+          internal_date_ms: int (epoch milliseconds).
+        """
         api = self._service.users().messages()
         msg = api.get(
             userId=USER_ID,

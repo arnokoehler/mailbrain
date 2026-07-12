@@ -80,3 +80,26 @@ def test_list_labels_maps_id_to_name():
     }
     client = GmailClient(service)
     assert client.list_labels() == {"Label_1": "Reizen", "INBOX": "INBOX"}
+
+
+def test_get_metadata_missing_payload_entirely():
+    # Gmail may return a message with no payload key at all (header-only / edge).
+    service = MagicMock()
+    messages_api = service.users.return_value.messages.return_value
+    messages_api.get.return_value.execute.return_value = {
+        "id": "m3",
+        "internalDate": "0",
+        "labelIds": [],
+    }
+    client = GmailClient(service)
+    meta = client.get_metadata("m3")
+    assert meta["sender"] == ""
+    assert meta["subject"] == ""
+    assert meta["label_ids"] == []
+
+
+def test_list_labels_empty_response():
+    service = MagicMock()
+    service.users.return_value.labels.return_value.list.return_value.execute.return_value = {}
+    client = GmailClient(service)
+    assert client.list_labels() == {}
