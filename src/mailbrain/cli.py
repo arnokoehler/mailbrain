@@ -9,6 +9,7 @@ import typer
 from rich.console import Console
 
 from mailbrain import config, paths
+from mailbrain.apply import execute_plan
 from mailbrain.gmail.auth import build_service, load_credentials
 from mailbrain.gmail.client import GmailClient
 from mailbrain.planner import plan_mutations
@@ -71,6 +72,41 @@ def scan(
     client = GmailClient(service)
     count = scan_mailbox(client, query, session_factory(paths.db_path()))
     console.print(f"[green]Scanned and cached[/] {count} messages")
+
+
+@app.command()
+def apply(
+    rules: Path = typer.Option(  # noqa: B008 - Typer option factory
+        Path("config/rules.yaml"), "--rules", help="Path to rules YAML."
+    ),
+    execute: bool = typer.Option(
+        False, "--execute", help="Actually apply changes to Gmail (default: dry-run)."
+    ),
+) -> None:
+    """Apply the classification plan to Gmail. Dry-run unless --execute is given."""
+    if not rules.exists():
+        console.print(f"[red]Rules file not found:[/] {rules}")
+        raise typer.Exit(code=2)
+    factory = session_factory(paths.db_path())
+    messages, current = load_cached(factory)
+    classifications = classify_messages(
+        messages, config.load_rules(rules).rules, datetime.now(UTC)
+    )
+    plans = plan_mutations(classifications, current)
+
+    if not execute:
+        render_plan(plans, messages, console=console)
+        render_metrics(summarize(plans, scanned=len(messages)), console=console)
+        console.print("[yellow]dry-run[/] — no changes applied. Re-run with --execute to apply.")
+        return
+
+    if not paths.credentials_path().exists():
+        console.print(f"[red]credentials.json not found:[/] {paths.credentials_path()}")
+        raise typer.Exit(code=2)
+    creds = load_credentials(paths.credentials_path(), paths.token_path())
+    client = GmailClient(build_service(creds))
+    run_id = execute_plan(client, factory, plans, current)
+    console.print(f"[green]Applied[/] {len(plans)} changes (run {run_id}).")
 
 
 if __name__ == "__main__":
