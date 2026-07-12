@@ -47,6 +47,7 @@ def test_multiple_rules_union_labels_and_or_booleans():
     assert c.matched_rule_ids == ("a", "b")
     assert c.add_labels == ("Administratie", "Reizen")
     assert c.archive is True
+    assert c.mark_read is False
 
 
 def test_duplicate_labels_deduped():
@@ -56,3 +57,7 @@ def test_duplicate_labels_deduped():
     ]
     c = classify([_msg("m1")], rules, NOW)[0]
     assert c.add_labels == ("Reizen",)
+
+
+def test_empty_rules_returns_empty():
+    assert classify([_msg("m1")], [], NOW) == []
