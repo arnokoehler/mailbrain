@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class GmailSettings(BaseModel):
@@ -39,6 +40,16 @@ class RuleMatch(BaseModel):
     subject_contains: list[str] = Field(default_factory=list)
     subject_regex: list[str] = Field(default_factory=list)
     older_than_days: int | None = None
+
+    @field_validator("subject_regex")
+    @classmethod
+    def _validate_regex(cls, patterns: list[str]) -> list[str]:
+        for pat in patterns:
+            try:
+                re.compile(pat)
+            except re.error as exc:
+                raise ValueError(f"invalid subject_regex {pat!r}: {exc}") from exc
+        return patterns
 
 
 class RuleActions(BaseModel):
