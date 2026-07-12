@@ -39,6 +39,9 @@ def classify(
     ),
 ) -> None:
     """Classify cached mail and print a dry-run report (no changes applied)."""
+    if not rules.exists():
+        console.print(f"[red]Rules file not found:[/] {rules}")
+        raise typer.Exit(code=2)
     rules_file = config.load_rules(rules)
     factory = session_factory(paths.db_path())
     messages, current = load_cached(factory)

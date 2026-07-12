@@ -9,6 +9,16 @@ from mailbrain.storage.models import Label, Message
 
 runner = CliRunner()
 
+RULES_YAML = (
+    "rules:\n"
+    "  - id: booking\n"
+    "    match:\n"
+    "      from_domain: [booking.com]\n"
+    "    actions:\n"
+    "      add_labels: [Reizen]\n"
+    "      archive: true\n"
+)
+
 
 def _seed(dbp):
     db.init_db(dbp)
@@ -28,15 +38,23 @@ def _seed(dbp):
         s.commit()
 
 
+def _write_rules(tmp_path):
+    rules = tmp_path / "rules.yaml"
+    rules.write_text(RULES_YAML)
+    return rules
+
+
 def test_classify_reports_planned_changes(monkeypatch, tmp_path):
     home = tmp_path / "mb"
     monkeypatch.setenv("MAILBRAIN_HOME", str(home))
     home.mkdir(parents=True)
     _seed(home / "state.db")
+    rules = _write_rules(tmp_path)
 
-    result = runner.invoke(app, ["classify", "--rules", "config/rules.yaml"])
+    result = runner.invoke(app, ["classify", "--rules", str(rules)])
     assert result.exit_code == 0, result.output
     assert "Reizen" in result.output
+    assert "archived 1" in result.output  # booking rule archives, message is in INBOX
 
 
 def test_classify_empty_db_is_clean(monkeypatch, tmp_path):
@@ -44,6 +62,19 @@ def test_classify_empty_db_is_clean(monkeypatch, tmp_path):
     monkeypatch.setenv("MAILBRAIN_HOME", str(home))
     home.mkdir(parents=True)
     db.init_db(home / "state.db")
-    result = runner.invoke(app, ["classify", "--rules", "config/rules.yaml"])
+    rules = _write_rules(tmp_path)
+
+    result = runner.invoke(app, ["classify", "--rules", str(rules)])
     assert result.exit_code == 0, result.output
     assert "planned 0" in result.output
+
+
+def test_classify_missing_rules_file_errors(monkeypatch, tmp_path):
+    home = tmp_path / "mb"
+    monkeypatch.setenv("MAILBRAIN_HOME", str(home))
+    home.mkdir(parents=True)
+    db.init_db(home / "state.db")
+
+    result = runner.invoke(app, ["classify", "--rules", str(tmp_path / "nope.yaml")])
+    assert result.exit_code == 2
+    assert "not found" in result.output
