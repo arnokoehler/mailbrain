@@ -56,3 +56,27 @@ class GmailClient:
     def list_labels(self) -> dict[str, str]:
         response = self._service.users().labels().list(userId=USER_ID).execute()
         return {lbl["id"]: lbl["name"] for lbl in response.get("labels", [])}
+
+    def create_label(self, name: str) -> str:
+        """Create a label (nested paths use '/' in the name); return its Gmail id."""
+        body = {
+            "name": name,
+            "labelListVisibility": "labelShow",
+            "messageListVisibility": "show",
+        }
+        created = self._service.users().labels().create(userId=USER_ID, body=body).execute()
+        return created["id"]  # type: ignore[no-any-return]
+
+    def batch_modify(
+        self,
+        message_ids: list[str],
+        add_label_ids: list[str],
+        remove_label_ids: list[str],
+    ) -> None:
+        """Add/remove label ids on up to 1000 messages in one call. Never deletes."""
+        body = {
+            "ids": message_ids,
+            "addLabelIds": add_label_ids,
+            "removeLabelIds": remove_label_ids,
+        }
+        self._service.users().messages().batchModify(userId=USER_ID, body=body).execute()
