@@ -71,3 +71,16 @@ def test_empty_match_never_matches():
 def test_all_present_criteria_must_hold():
     rule = _rule(from_domain=["booking.com"], subject_contains=["invoice"])
     assert not rule_matches(rule, _msg(sender="a@booking.com", subject="receipt"), NOW)
+
+
+def test_older_than_days_boundary_is_inclusive():
+    # age exactly == threshold must match (>= semantics)
+    assert rule_matches(_rule(older_than_days=3), _msg(days_old=3), NOW)
+
+
+def test_sender_without_at_sign_does_not_match_domain_rule():
+    assert not rule_matches(_rule(from_domain=["booking.com"]), _msg(sender="garbage"), NOW)
+
+
+def test_rule_domain_case_insensitive():
+    assert rule_matches(_rule(from_domain=["Booking.COM"]), _msg(sender="a@booking.com"), NOW)

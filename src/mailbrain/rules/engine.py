@@ -35,6 +35,10 @@ def rule_matches(rule: Rule, msg: MessageMeta, now: datetime) -> bool:
 
     A rule with no criteria never matches (a criterion-less rule that matched
     everything would be a footgun).
+
+    Note: subject_contains is case-insensitive; subject_regex is matched with
+    re.search and honours the pattern's own flags (use ``(?i)`` for
+    case-insensitive regex). Domain matching is case-insensitive.
     """
     m = rule.match
     if not _has_any_criterion(m):
