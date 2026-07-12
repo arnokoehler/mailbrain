@@ -5,12 +5,29 @@ Pure helpers here; the orchestrating executor is added in the next task.
 
 from __future__ import annotations
 
+import json
 from collections import defaultdict
+from collections.abc import Mapping
+from typing import Protocol
 
+from sqlalchemy.orm import Session, sessionmaker
+
+from mailbrain.labels import ensure_label, name_to_id
 from mailbrain.planner import PlannedMutation
+from mailbrain.storage.models import Mutation, Run
 
 INBOX = "INBOX"
 UNREAD = "UNREAD"
+
+
+class SupportsApply(Protocol):
+    def create_label(self, name: str) -> str: ...
+    def batch_modify(
+        self, message_ids: list[str], add_label_ids: list[str], remove_label_ids: list[str]
+    ) -> None: ...
+
+
+BATCH_SIZE = 1000
 
 
 def desired_labels(current: set[str], plan: PlannedMutation) -> set[str]:
@@ -35,3 +52,66 @@ def group_operations(
     for message_id, add_ids, remove_ids in entries:
         groups[(add_ids, remove_ids)].append(message_id)
     return dict(groups)
+
+
+def _resolve_ids(
+    names: set[str], client: SupportsApply, session: Session, cache: dict[str, str]
+) -> frozenset[str]:
+    return frozenset(ensure_label(client, session, name, cache) for name in names)
+
+
+def execute_plan(
+    client: SupportsApply,
+    session_factory: sessionmaker[Session],
+    plans: list[PlannedMutation],
+    current_labels: Mapping[str, set[str]],
+) -> int:
+    """Execute plans against Gmail, recording every mutation under a new Run. Returns run id."""
+    with session_factory() as session:
+        run = Run(dry_run=False, scanned=len(current_labels))
+        session.add(run)
+        session.flush()  # assign run.id
+        cache = name_to_id(session)
+
+        entries: list[tuple[str, frozenset[str], frozenset[str]]] = []
+        labeled = archived = 0
+        for plan in plans:
+            before = set(current_labels.get(plan.gmail_id, set()))
+            after = desired_labels(before, plan)
+            add_names = after - before
+            remove_names = before - after
+            if not add_names and not remove_names:
+                continue
+            add_ids = _resolve_ids(add_names, client, session, cache)
+            remove_ids = _resolve_ids(remove_names, client, session, cache)
+            entries.append((plan.gmail_id, add_ids, remove_ids))
+            session.add(
+                Mutation(
+                    run_id=run.id,
+                    message_gmail_id=plan.gmail_id,
+                    labels_before=json.dumps(sorted(before)),
+                    labels_after=json.dumps(sorted(after)),
+                    archived_before=INBOX in before,
+                    archived_after=INBOX in after,
+                    read_before=UNREAD in before,
+                    read_after=UNREAD in after,
+                    applied=True,
+                )
+            )
+            if add_names:
+                labeled += 1
+            if INBOX in before and INBOX not in after:
+                archived += 1
+
+        for (add_ids, remove_ids), message_ids in group_operations(entries).items():
+            for batch in chunk(message_ids, BATCH_SIZE):
+                client.batch_modify(
+                    message_ids=batch,
+                    add_label_ids=sorted(add_ids),
+                    remove_label_ids=sorted(remove_ids),
+                )
+
+        run.labeled = labeled
+        run.archived = archived
+        session.commit()
+        return run.id
