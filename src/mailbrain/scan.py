@@ -70,12 +70,19 @@ def load_cached(
             label_ids: list[str] = json.loads(row.label_ids) if row.label_ids else []
             names = {id_to_name.get(lid, lid) for lid in label_ids}
             current[row.gmail_id] = names
+            raw_date = row.internal_date
+            if raw_date is None:
+                internal_date = datetime.fromtimestamp(0, tz=UTC)
+            elif raw_date.tzinfo is None:
+                internal_date = raw_date.replace(tzinfo=UTC)
+            else:
+                internal_date = raw_date
             messages.append(
                 MessageMeta(
                     gmail_id=row.gmail_id,
                     sender=row.sender or "",
                     subject=row.subject or "",
-                    internal_date=row.internal_date or datetime.fromtimestamp(0, tz=UTC),
+                    internal_date=internal_date,
                     current_labels=tuple(sorted(names)),
                 )
             )
