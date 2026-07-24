@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
@@ -11,6 +12,8 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mailbrain.rules.models import MessageMeta
 from mailbrain.storage.models import Label, Message
+
+logger = logging.getLogger(__name__)
 
 
 class SupportsGmailReads(Protocol):
@@ -46,16 +49,30 @@ def scan_mailbox(
     client: SupportsGmailReads,
     query: str,
     session_factory: sessionmaker[Session],
+    batch_size: int = 200,
 ) -> int:
-    """Fetch all message metadata for `query`, cache messages + labels. Returns count."""
+    """Fetch all message metadata for `query`, cache messages + labels. Returns count.
+
+    Commits labels first, then messages in batches of `batch_size`, so an
+    interrupt (Ctrl-C) keeps everything fetched so far instead of discarding
+    the whole scan. Progress is logged at INFO.
+    """
+    logger.info("Listing message ids for query %r ...", query)
     ids = client.list_message_ids(query)
     labels = client.list_labels()
+    total = len(ids)
+    logger.info("Found %d messages and %d labels; fetching metadata ...", total, len(labels))
     with session_factory() as session:
         _upsert_labels(session, labels)
-        for message_id in ids:
+        session.commit()  # labels available even if the message loop is interrupted
+        for i, message_id in enumerate(ids, 1):
             _upsert_message(session, client.get_metadata(message_id))
+            if i % batch_size == 0:
+                session.commit()
+                logger.info("cached %d/%d messages", i, total)
         session.commit()
-    return len(ids)
+    logger.info("Done: cached %d messages", total)
+    return total
 
 
 def load_cached(

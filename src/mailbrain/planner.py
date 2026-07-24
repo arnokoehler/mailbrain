@@ -20,6 +20,7 @@ class PlannedMutation:
     add_labels: tuple[str, ...]
     archive: bool
     mark_read: bool
+    matched_rule_ids: tuple[str, ...] = ()
 
     def is_noop(self) -> bool:
         return not self.add_labels and not self.archive and not self.mark_read
@@ -40,6 +41,7 @@ def plan_mutations(
             add_labels=to_add,
             archive=archive,
             mark_read=mark_read,
+            matched_rule_ids=c.matched_rule_ids,
         )
         if not mutation.is_noop():
             plans.append(mutation)

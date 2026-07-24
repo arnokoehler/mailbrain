@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.logging import RichHandler
 
 from mailbrain import config, paths
 from mailbrain.apply import execute_plan
@@ -41,6 +43,9 @@ def classify(
     rules: Path = typer.Option(  # noqa: B008 - Typer option factory
         Path("config/rules.yaml"), "--rules", help="Path to rules YAML."
     ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show which rule(s) matched each message."
+    ),
 ) -> None:
     """Classify cached mail and print a dry-run report (no changes applied)."""
     if not rules.exists():
@@ -52,15 +57,27 @@ def classify(
     classifications = classify_messages(messages, rules_file.rules, datetime.now(UTC))
     plans = plan_mutations(classifications, current)
     metrics = summarize(plans, scanned=len(messages))
-    render_plan(plans, messages, console=console)
+    render_plan(plans, messages, console=console, verbose=verbose)
     render_metrics(metrics, console=console)
 
 
 @app.command()
 def scan(
     query: str = typer.Option("in:inbox", "--query", help="Gmail search query."),
+    quiet: bool = typer.Option(
+        False, "--quiet", "-q", help="Suppress per-batch scan progress output."
+    ),
 ) -> None:
     """Fetch Gmail metadata for the query and cache it locally."""
+    # Root stays at WARNING so noisy third-party INFO (googleapiclient, etc.)
+    # is suppressed; only mailbrain's own progress logs are shown.
+    logging.basicConfig(
+        level=logging.WARNING,
+        format="%(message)s",
+        handlers=[RichHandler(console=console, show_time=False, show_path=False, markup=True)],
+        force=True,
+    )
+    logging.getLogger("mailbrain").setLevel(logging.WARNING if quiet else logging.INFO)
     if not paths.credentials_path().exists():
         console.print(
             f"[red]credentials.json not found:[/] {paths.credentials_path()}\n"
@@ -83,6 +100,9 @@ def apply(
     execute: bool = typer.Option(
         False, "--execute", help="Actually apply changes to Gmail (default: dry-run)."
     ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show which rule(s) matched each message (dry-run)."
+    ),
 ) -> None:
     """Apply the classification plan to Gmail. Dry-run unless --execute is given."""
     if not rules.exists():
@@ -96,7 +116,7 @@ def apply(
     plans = plan_mutations(classifications, current)
 
     if not execute:
-        render_plan(plans, messages, console=console)
+        render_plan(plans, messages, console=console, verbose=verbose)
         render_metrics(summarize(plans, scanned=len(messages)), console=console)
         console.print("[yellow]dry-run[/] — no changes applied. Re-run with --execute to apply.")
         return

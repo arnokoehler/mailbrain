@@ -34,21 +34,27 @@ def render_plan(
     plans: list[PlannedMutation],
     messages: list[MessageMeta],
     console: Console | None = None,
+    verbose: bool = False,
 ) -> None:
     console = console or Console()
     subjects = {m.gmail_id: m.subject for m in messages}
     table = Table(title="MailBrain — planned changes (dry-run)")
     table.add_column("Subject", overflow="ellipsis", max_width=48)
+    if verbose:
+        table.add_column("Matched rules")
     table.add_column("Add labels")
     table.add_column("Archive")
     table.add_column("Read")
     for p in plans:
-        table.add_row(
-            subjects.get(p.gmail_id, p.gmail_id),
+        row = [subjects.get(p.gmail_id, p.gmail_id)]
+        if verbose:
+            row.append(", ".join(p.matched_rule_ids) or "—")
+        row += [
             ", ".join(p.add_labels),
             "yes" if p.archive else "",
             "yes" if p.mark_read else "",
-        )
+        ]
+        table.add_row(*row)
     console.print(table)
 
 
