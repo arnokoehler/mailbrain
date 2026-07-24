@@ -63,6 +63,7 @@ class RuleActions(BaseModel):
 class Rule(BaseModel):
     id: str
     match: RuleMatch
+    exclude: RuleMatch | None = None
     actions: RuleActions
 
 

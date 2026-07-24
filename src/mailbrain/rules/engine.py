@@ -31,17 +31,12 @@ def _has_any_criterion(m: RuleMatch) -> bool:
     )
 
 
-def rule_matches(rule: Rule, msg: MessageMeta, now: datetime) -> bool:
-    """True if the message satisfies ALL present criteria of the rule.
+def _criteria_match(m: RuleMatch, msg: MessageMeta, now: datetime) -> bool:
+    """True if the message satisfies ALL present criteria of `m`.
 
-    A rule with no criteria never matches (a criterion-less rule that matched
-    everything would be a footgun).
-
-    Note: subject_contains is case-insensitive; subject_regex is matched with
-    re.search and honours the pattern's own flags (use ``(?i)`` for
-    case-insensitive regex). Domain matching is case-insensitive.
+    A criteria set with no criteria never matches (a criterion-less set that
+    matched everything would be a footgun).
     """
-    m = rule.match
     if not _has_any_criterion(m):
         return False
 
@@ -64,6 +59,21 @@ def rule_matches(rule: Rule, msg: MessageMeta, now: datetime) -> bool:
             return False
 
     return True
+
+
+def rule_matches(rule: Rule, msg: MessageMeta, now: datetime) -> bool:
+    """True if the message satisfies the rule's ``match`` and not its ``exclude``.
+
+    ``exclude`` vetoes an otherwise-matching rule: if its criteria are satisfied,
+    the rule does not match. An absent or empty ``exclude`` never vetoes.
+
+    Note: subject_contains is case-insensitive; subject_regex is matched with
+    re.search and honours the pattern's own flags (use ``(?i)`` for
+    case-insensitive regex). Domain matching is case-insensitive.
+    """
+    if not _criteria_match(rule.match, msg, now):
+        return False
+    return not (rule.exclude is not None and _criteria_match(rule.exclude, msg, now))
 
 
 def classify(

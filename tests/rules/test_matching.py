@@ -84,3 +84,28 @@ def test_sender_without_at_sign_does_not_match_domain_rule():
 
 def test_rule_domain_case_insensitive():
     assert rule_matches(_rule(from_domain=["Booking.COM"]), _msg(sender="a@booking.com"), NOW)
+
+
+def _rule_with_exclude(match: RuleMatch, exclude: RuleMatch) -> Rule:
+    return Rule(id="r", match=match, exclude=exclude, actions=RuleActions(add_labels=["L"]))
+
+
+def test_exclude_vetoes_an_otherwise_matching_rule():
+    rule = _rule_with_exclude(
+        RuleMatch(subject_contains=["factuur"]),
+        RuleMatch(subject_contains=["Kenteken"]),
+    )
+    assert not rule_matches(rule, _msg(subject="factuur (Kenteken K-830-HL)"), NOW)
+
+
+def test_exclude_does_not_veto_when_its_criteria_absent():
+    rule = _rule_with_exclude(
+        RuleMatch(subject_contains=["factuur"]),
+        RuleMatch(subject_contains=["Kenteken"]),
+    )
+    assert rule_matches(rule, _msg(subject="factuur zonder auto"), NOW)
+
+
+def test_empty_exclude_never_vetoes():
+    rule = _rule_with_exclude(RuleMatch(subject_contains=["factuur"]), RuleMatch())
+    assert rule_matches(rule, _msg(subject="uw factuur"), NOW)
