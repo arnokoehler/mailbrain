@@ -50,12 +50,21 @@ def scan_mailbox(
     query: str,
     session_factory: sessionmaker[Session],
     batch_size: int = 200,
+    skip_cached: bool = False,
 ) -> int:
-    """Fetch all message metadata for `query`, cache messages + labels. Returns count.
+    """Fetch message metadata for `query`, cache messages + labels. Returns the
+    number of messages fetched and cached this run.
 
     Commits labels first, then messages in batches of `batch_size`, so an
     interrupt (Ctrl-C) keeps everything fetched so far instead of discarding
     the whole scan. Progress is logged at INFO.
+
+    A message whose metadata fetch fails (e.g. a Gmail 400 "failedPrecondition"
+    on one id) is logged and skipped rather than aborting the whole scan.
+
+    With ``skip_cached=True`` any id already present in the cache is skipped, so
+    a re-run resumes an interrupted scan cheaply instead of refetching
+    everything. Default False refetches and refreshes every message.
     """
     logger.info("Listing message ids for query %r ...", query)
     ids = client.list_message_ids(query)
@@ -65,14 +74,26 @@ def scan_mailbox(
     with session_factory() as session:
         _upsert_labels(session, labels)
         session.commit()  # labels available even if the message loop is interrupted
+        already = set(session.scalars(select(Message.gmail_id)).all()) if skip_cached else set()
+        cached = 0
+        failed = 0
         for i, message_id in enumerate(ids, 1):
-            _upsert_message(session, client.get_metadata(message_id))
-            if i % batch_size == 0:
+            if message_id in already:
+                continue
+            try:
+                meta = client.get_metadata(message_id)
+            except Exception as exc:  # noqa: BLE001 - one bad id must not abort a bulk scan
+                failed += 1
+                logger.warning("skipping message %s: %s", message_id, exc)
+                continue
+            _upsert_message(session, meta)
+            cached += 1
+            if cached % batch_size == 0:
                 session.commit()
-                logger.info("cached %d/%d messages", i, total)
+                logger.info("cached %d messages (%d/%d scanned)", cached, i, total)
         session.commit()
-    logger.info("Done: cached %d messages", total)
-    return total
+    logger.info("Done: cached %d messages this run (%d skipped)", cached, failed)
+    return cached
 
 
 def load_cached(

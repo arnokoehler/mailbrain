@@ -67,6 +67,9 @@ def scan(
     quiet: bool = typer.Option(
         False, "--quiet", "-q", help="Suppress per-batch scan progress output."
     ),
+    resume: bool = typer.Option(
+        False, "--resume", help="Skip ids already cached (resume an interrupted scan)."
+    ),
 ) -> None:
     """Fetch Gmail metadata for the query and cache it locally."""
     # Root stays at WARNING so noisy third-party INFO (googleapiclient, etc.)
@@ -88,7 +91,7 @@ def scan(
     creds = load_credentials(paths.credentials_path(), paths.token_path())
     service = build_service(creds)
     client = GmailClient(service)
-    count = scan_mailbox(client, query, session_factory(paths.db_path()))
+    count = scan_mailbox(client, query, session_factory(paths.db_path()), skip_cached=resume)
     console.print(f"[green]Scanned and cached[/] {count} messages")
 
 
