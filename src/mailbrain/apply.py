@@ -11,11 +11,12 @@ from collections import defaultdict
 from collections.abc import Mapping
 from typing import Protocol
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from mailbrain.labels import ensure_label, name_to_id
 from mailbrain.planner import PlannedMutation
-from mailbrain.storage.models import Mutation, Run
+from mailbrain.storage.models import Message, Mutation, Run
 
 INBOX = "INBOX"
 UNREAD = "UNREAD"
@@ -84,6 +85,7 @@ def execute_plan(
         cache = name_to_id(session)
 
         entries: list[tuple[str, frozenset[str], frozenset[str]]] = []
+        applied_after: dict[str, set[str]] = {}
         labeled = archived = 0
         for plan in plans:
             before = set(current_labels.get(plan.gmail_id, set()))
@@ -95,6 +97,7 @@ def execute_plan(
             add_ids = _resolve_ids(add_names, client, session, cache)
             remove_ids = _resolve_existing_ids(remove_names, cache)
             entries.append((plan.gmail_id, add_ids, remove_ids))
+            applied_after[plan.gmail_id] = after
             session.add(
                 Mutation(
                     run_id=run.id,
@@ -123,7 +126,23 @@ def execute_plan(
                     remove_label_ids=sorted(remove_ids),
                 )
 
+        # Sync the local cache to the just-applied state so a later classify/apply
+        # sees these as done and does not re-propose them. Cached label_ids store
+        # Gmail label ids; resolve names via the cache (system labels are their own id).
+        _sync_cached_labels(session, applied_after, cache)
+
         run.labeled = labeled
         run.archived = archived
         session.commit()
         return run.id
+
+
+def _sync_cached_labels(
+    session: Session, applied_after: dict[str, set[str]], cache: dict[str, str]
+) -> None:
+    """Rewrite Message.label_ids for each applied message to reflect its new state."""
+    for gmail_id, after in applied_after.items():
+        row = session.scalar(select(Message).where(Message.gmail_id == gmail_id))
+        if row is None:
+            continue
+        row.label_ids = json.dumps(sorted(cache.get(name, name) for name in after))
