@@ -1,91 +1,252 @@
+# Generated from existing Gmail labels: vendor domains that map >=70% to one label.
+# Personal mail (gmail/hotmail/etc.) is intentionally excluded - not domain-separable.
 rules:
-  - id: booking-payment
-    match:
-      from_domain: [booking.com]
-      subject_contains: [payment received, receipt]
-    actions:
-      add_labels: [Reizen]
-      archive: true
-
-  - id: campings
-    match:
-      subject_contains: [camping, campsite]
-    actions:
-      add_labels: [Reizen]
-      archive: true
-
-  - id: password-reset
-    match:
-      subject_regex: ["(?i)password reset"]
-      older_than_days: 3
-    actions:
-      add_labels: [to-be-removed]
-      archive: true
-      mark_read: true
-
-  - id: android-weekly
-    match:
-      subject_contains: [Android Weekly]
-    actions:
-      add_labels: [to-be-removed]
-      archive: true
-
-  - id: bnnvara-newsletter
-    match:
-      from_domain: [bnnvara.nl]
-    actions:
-      add_labels: [to-be-removed]
-      archive: true
-
-  - id: follow-this
-    match:
-      subject_contains: [Follow This]
-    actions:
-      add_labels: [to-be-removed]
-      archive: true
-
-  - id: social-schools
-    match:
-      from_domain: [socialschools.nl]
-    actions:
-      add_labels: [to-be-removed]
-      archive: true
-
-  - id: library-newsletter
-    match:
-      subject_contains: [bibliotheek, library]
-    actions:
-      add_labels: [to-be-removed]
-      archive: true
-
-  - id: jcrete
-    match:
-      subject_contains: [JCrete, Heinz Kabutz]
-    actions:
-      add_labels: [JCrete]
-
-  - id: bux-reports
-    match:
-      from_domain: [getbux.com]
-    actions:
-      add_labels: [Beleggen]
-      archive: true
-
-  - id: degiro
-    match:
-      from_domain: [degiro.nl]
-    actions:
-      add_labels: [Beleggen/deGiro]
-      archive: true
-
-  - id: home-utilities
-    match:
-      subject_contains: [energie, internet, factuur]
-    actions:
-      add_labels: [Albrecht Thaerlaan 57]
-
-  - id: orders-invoices
-    match:
-      subject_contains: [order, invoice, factuur, bestelling]
-    actions:
-      add_labels: [Administratie/Aankopen]
+  - id: acties
+    match: { from_domain: [takeaction.greatergood.com] }
+    actions: { add_labels: ["Acties"] }
+  - id: administratie
+    match: { from_domain: [westland.rabobank.nl, gamma.nl, pwn.nl, my-energie.nl, supernews.com, mail.marktplaats.nl] }
+    actions: { add_labels: ["Administratie"] }
+  - id: administratie-aankopen
+    match: { from_domain: [edm.postnl.nl, notice.aliexpress.com, kaartje2go.nl, berrydemey.com, dhlecommerce.nl, fonq.nl, elektramat.nl, mantel.com, jysk.com, oypo.nl, internetshop.nl, gsmpunt.nl, calm.com, topbloemen.nl, thermowear.nl, tubeclamps.nl, redjepakketje.com, verfgroothandel.nl, email.greetz.nl, e.greetz.nl, plutosport.nl, e.drukwerkdeal.nl, servicemail.fonq.nl, athleteshop-00ac2ebb91f8.intercom-mail.com, karwei.nl, onlineshop.adidas.nl, norrod.nl, maxict.nl, hotsoup.nl, uwantisell.nl, futurumshop.nl, service.ibood.com, bobshop.nl, perfectbody.nl, famed.nl, sendcloud.com, hornbach.nl, kruidvat.nl, xxlnutrition.com, sbdapparel.nl, mediamarkt.nl, efarma.nl, steigerbuisgroothandel.nl, delivery-status.com, e.kwantum.nl, hallmark.nl, feestwinkelxl.nl, ne.nl, poeba.nl, taxivandalfsen.nl, sossolutions.nl, broekumgroep.nl, zooplus.nl] }
+    actions: { add_labels: ["Administratie/Aankopen"] }
+  - id: administratie-aankopen-amazon
+    match: { from_domain: [amazon.com, audible.com] }
+    actions: { add_labels: ["Administratie/Aankopen/amazon"] }
+  - id: administratie-aankopen-apple
+    match: { from_domain: [email.apple.com] }
+    actions: { add_labels: ["Administratie/Aankopen/apple"] }
+  - id: administratie-aankopen-discorcd
+    match: { from_domain: [midjourney.com, discord.com] }
+    actions: { add_labels: ["Administratie/Aankopen/discorcd"] }
+  - id: administratie-aankopen-games
+    match: { from_domain: [steampowered.com] }
+    actions: { add_labels: ["Administratie/Aankopen/games"] }
+  - id: administratie-aankopen-kiwico
+    match: { from_domain: [deposco.com, kiwico.com] }
+    actions: { add_labels: ["Administratie/Aankopen/kiwico"] }
+  - id: administratie-aankopen-meubels
+    match: { from_domain: [molenaarmeubelen.nl, wifimedia.eu] }
+    actions: { add_labels: ["Administratie/Aankopen/meubels"] }
+  - id: administratie-aankopen-outfit
+    match: { from_domain: [moonheels.nl] }
+    actions: { add_labels: ["Administratie/Aankopen/outfit"] }
+  - id: administratie-aankopen-pakketjes
+    match: { from_domain: [kurk24.nl, muurbeugel.nl, haarimport.nl] }
+    actions: { add_labels: ["Administratie/Aankopen/pakketjes"] }
+  - id: administratie-aankopen-pakketjes-body-fit
+    match: { from_domain: [bodyenfitshop.nl, e.bodyandfit.com] }
+    actions: { add_labels: ["Administratie/Aankopen/pakketjes/body&fit"] }
+  - id: administratie-aankopen-pakketjes-bol-com
+    match: { from_domain: [bol.com, verkopen.bol.com] }
+    actions: { add_labels: ["Administratie/Aankopen/pakketjes/bol.com"] }
+  - id: administratie-aankopen-pakketjes-coolblue
+    match: { from_domain: [coolblue.nl, bezorging.coolblue.nl] }
+    actions: { add_labels: ["Administratie/Aankopen/pakketjes/coolblue"] }
+  - id: administratie-aankopen-pakketjes-decathlon
+    match: { from_domain: [decathlon.nl, decathlon.com] }
+    actions: { add_labels: ["Administratie/Aankopen/pakketjes/decathlon"] }
+  - id: administratie-aankopen-pakketjes-vodafone
+    match: { from_domain: [informatie.vodafone.nl] }
+    actions: { add_labels: ["Administratie/Aankopen/pakketjes/vodafone"] }
+  - id: administratie-aankopen-thuisbezorgd-nl
+    match: { from_domain: [update.thuisbezorgd.nl] }
+    actions: { add_labels: ["Administratie/Aankopen/thuisbezorgd.nl"] }
+  - id: administratie-accounts
+    match: { from_domain: [dealextreme.com, support.hitnews.eu, whizlabs.com, route.monster.com, newsgrabber.nl, ebay.nl, ticketservice.nl, newzbin.com, checkout.google.com, p-less.nl, yourdomain.com, filesonic.com, courier.qwiki.com, yunoo.nl, nieuwsbrief.eci.nl, james4you.nl, rapidshare.com, yabnews.nl, gobella.nl, alternate.nl, zoekbijbaan.nl, erasmusmc.nl] }
+    actions: { add_labels: ["Administratie/Accounts"] }
+  - id: administratie-auto
+    match: { from_domain: [mywheels.nl, ubench.com, euromaster.com, nefkens.nl, wiberrentacar.com, mhcmobility.nl, sunnycars.nl, volkswagen.de, muntstad.nl, biemondvanwijk.nl, asnmail.nl, kavautoverhuur.nl, care-mail.nl, rdw.nl, cartrawler.com] }
+    actions: { add_labels: ["Administratie/Auto"] }
+  - id: administratie-loonstrook
+    match: { from_domain: [ah.nl] }
+    actions: { add_labels: ["Administratie/Loonstrook"] }
+  - id: administratie-vakantie
+    match: { from_domain: [arkefly.nl] }
+    actions: { add_labels: ["Administratie/Vakantie"] }
+  - id: administratie-vakantie-barcelona
+    match: { from_domain: [ext.sagradafamilia.org, sagradafamilia.org, t1.tripadvisor.com] }
+    actions: { add_labels: ["Administratie/Vakantie/Barcelona"] }
+  - id: administratie-vakantie-rome
+    match: { from_domain: [tiqets.com, citywonders.com] }
+    actions: { add_labels: ["Administratie/Vakantie/rome"] }
+  - id: administratie-dokter
+    match: { from_domain: [saltro.nl] }
+    actions: { add_labels: ["Administratie/dokter"] }
+  - id: administratie-huis-huizenjacht
+    match: { from_domain: [beumer.nl, esteon.com, stairway-utrecht.nl, leeuweplaats.nl] }
+    actions: { add_labels: ["Administratie/huis/huizenjacht"] }
+  - id: administratie-jamie
+    match: { from_domain: [fantaziehuis.nl, saartje.nl, ouderportaal.nl, kindergarden.nl, ksu-utrecht.nl, e.kindergarden.nl, unilabs.com, uwtandarts.online, bueno.nu] }
+    actions: { add_labels: ["Administratie/jamie"] }
+  - id: administratie-jamie-one2track
+    match: { from_domain: [one2track.nl] }
+    actions: { add_labels: ["Administratie/jamie/one2track"] }
+  - id: administratie-leaseauto
+    match: { from_domain: [leaseresult.nl] }
+    actions: { add_labels: ["Administratie/leaseauto"] }
+  - id: administratie-pensioen
+    match: { from_domain: [klmgrondfonds.nl, e.stippensioen.nl, mijnwerknemerspensioen.asr.nl, insight.nn.nl] }
+    actions: { add_labels: ["Administratie/pensioen"] }
+  - id: administratie-pijnenburg-6-vleuten
+    match: { from_domain: [vandebron.nl, budgetallesin1.nl, welwonend.nl, greenchoice.nl, nba-zonnepanelen.nl, groenpand.nl, elite-wellness.nl, atlaspower.nl, calcasa.nl, mailgb.custhelp.com, elektroshop.nl, feikencv.nl, onderhoudsbedrijfbos.nl, atagbenelux.com, guidion.nl, ajtec.nl, bk-elektro.nl, vanheesen.nl] }
+    actions: { add_labels: ["Administratie/pijnenburg 6 vleuten"] }
+  - id: administratie-telefoon
+    match: { from_domain: [service.tele2.nl, sales.tele2.nl, ctdi.eu, oneplus.net, mail.tele2.nl] }
+    actions: { add_labels: ["Administratie/telefoon"] }
+  - id: administratie-tickets
+    match: { from_domain: [mrblackandthewhiteox.com, ticketveiling.nl, email.ticketmaster.nl] }
+    actions: { add_labels: ["Administratie/tickets"] }
+  - id: administratie-trein
+    match: { from_domain: [ns.nl, ov-chipkaart.nl, email.ns.nl] }
+    actions: { add_labels: ["Administratie/trein"] }
+  - id: administratie-zorg
+    match: { from_domain: [zorgmail.nl] }
+    actions: { add_labels: ["Administratie/zorg"] }
+  - id: albrecht-thaerlaan-57
+    match: { from_domain: [deruitermakelaarshuis.nl, vangrafhorst.nl, servicemail.energiedirect.nl, mail.odido.nl, dakcentralenederland.nl, drostedevries.com, paolokyc.com, samen.greenchoice.nl, verhoefdakramen.nl, basmakelaars.nl] }
+    actions: { add_labels: ["Albrecht Thaerlaan 57"] }
+  - id: beleggen
+    match: { from_domain: [getbux.com, tldrnewsletter.com] }
+    actions: { add_labels: ["Beleggen"] }
+  - id: beleggen-degiro
+    match: { from_domain: [mail.degiro.com] }
+    actions: { add_labels: ["Beleggen/deGiro"] }
+  - id: daily-kink
+    match: { from_domain: [exploringdeeper.com] }
+    actions: { add_labels: ["Daily/kink"] }
+  - id: kennis-training
+    match: { from_domain: [jpeople.co.uk, geekle.us, trainalseenoermensindestad.nl] }
+    actions: { add_labels: ["Kennis/Training"] }
+  - id: kennis-meetup
+    match: { from_domain: [offerzen.com] }
+    actions: { add_labels: ["Kennis/meetup"] }
+  - id: notes-time-management
+    match: { from_domain: [wakkerdier.nl] }
+    actions: { add_labels: ["Notes/Time Management"] }
+  - id: persoonlijk
+    match: { from_domain: [kuleuven.be, profijt-naaldwijk.nl] }
+    actions: { add_labels: ["Persoonlijk"] }
+  - id: persoonlijk-fetlife
+    match: { from_domain: [secret-underground.com] }
+    actions: { add_labels: ["Persoonlijk/fetlife"] }
+  - id: persoonlijk-petrianne
+    match: { from_domain: [mango.com] }
+    actions: { add_labels: ["Persoonlijk/petrianne"] }
+  - id: persoonlijk-psycholoog
+    match: { from_domain: [mentaalbeter.nl, thecalmme.nl] }
+    actions: { add_labels: ["Persoonlijk/psycholoog"] }
+  - id: persoonlijk-travel
+    match: { from_domain: [visum.nl, incadventures.com] }
+    actions: { add_labels: ["Persoonlijk/travel"] }
+  - id: reizen
+    match: { from_domain: [booking.com, bosmeer.nl, property.booking.com, cpbuitensport.com, vacansoleil.com, parkingshop.com, cars.booking.com, parador.es, i.vacanceselect.com] }
+    actions: { add_labels: ["Reizen"] }
+  - id: sport
+    match: { from_domain: [stadswild.nl, goedgevoed-goedgetraind.nl, eventmaker.nl, mudmasters.nl, kartaboardsports.nl, golazo.com, bewarebeach.nl, urbanathlon.nl, thecolorrun.com, mudrunfun.nl, healthcity.nl] }
+    actions: { add_labels: ["Sport"] }
+  - id: sport-cfa
+    match: { from_domain: [mobilisfysio.nl, lowlandsthrowdown.nl, mindbodyonline.com] }
+    actions: { add_labels: ["Sport/CFA"] }
+  - id: sport-fysiofabriek
+    match: { from_domain: [fysiofabriek.nl, spotonmedics.nl] }
+    actions: { add_labels: ["Sport/Fysiofabriek"] }
+  - id: sport-coaching
+    match: { from_domain: [rhino-sportzorg.nl] }
+    actions: { add_labels: ["Sport/coaching"] }
+  - id: sport-coasttocoast
+    match: { from_domain: [12gobiking.nl, ratrace.com] }
+    actions: { add_labels: ["Sport/coasttocoast"] }
+  - id: sport-red-bull
+    match: { from_domain: [events.redbull.com] }
+    actions: { add_labels: ["Sport/red bull"] }
+  - id: sport-salsa
+    match: { from_domain: [unionsalsadancecompany.nl, lasalsa.nl] }
+    actions: { add_labels: ["Sport/salsa"] }
+  - id: sport-unscared
+    match: { from_domain: [trumin.com] }
+    actions: { add_labels: ["Sport/unscared"] }
+  - id: sport-waterpolo
+    match: { from_domain: [uzsc.nl, sportlinkservices.nl] }
+    actions: { add_labels: ["Sport/waterpolo"] }
+  - id: sport-zwemmen
+    match: { from_domain: [zwemmen-utrecht.nl] }
+    actions: { add_labels: ["Sport/zwemmen"] }
+  - id: trouwen
+    match: { from_domain: [dengh.nl, marienwaerdt.nl, reclamedeal.nl, fuif.nl, dehooibergh.nl, email.suitsupply.com, macaronstore.nl, buiten-bruiloft.nl, wimmeeussen.be] }
+    actions: { add_labels: ["Trouwen"] }
+  - id: werk
+    match: { from_domain: [blendle.com, jouwjavavacature.nl, searchitrecruitment.com, jdriven.com, q-logic.nl, rabobank.com, fahr-becker.nl, linkit.nl, bonque.nl, java-recruitment.com] }
+    actions: { add_labels: ["Werk"] }
+  - id: werk-klm
+    match: { from_domain: [mashery.com, xmedia.airfrance.fr, support.digitalocean.com] }
+    actions: { add_labels: ["Werk/KLM"] }
+  - id: werk-pr-totaal
+    match: { from_domain: [trenddevelopment.nl, compose.io, antagonist.nl, haarlem.nl, roberteverstekst.nl] }
+    actions: { add_labels: ["Werk/PR-TOTAAL"] }
+  - id: werk-pr-totaal-oliebollen
+    match: { from_domain: [osn-eventservice.nl] }
+    actions: { add_labels: ["Werk/PR-TOTAAL/oliebollen"] }
+  - id: werk-taken
+    match: { from_domain: [quelmedia.nl] }
+    actions: { add_labels: ["Werk/Taken"] }
+  - id: werk-unity
+    match: { from_domain: [dixm.nl, unitydrugs.nl, context.nl, groenewegen.com, richtlijn.be, 40plusrelatie.nl, novadic-kentron.nl, graffiti.net, krve.nl, versatel.nl, unity.nl, de-bruyn.eu, qpass.com, geurst-schulze.nl, mad.scientist.com, nos.nl, doublem.nl, comsecglobal.com, mentrum.nl, lemon.nl, hkc-europe.com, boomchicago.nl, wapwinkel.nl, noel-vaes.be, bestway-europe.com, bg.fnv.nl, filterz.net, pixami.nl, fury.nl] }
+    actions: { add_labels: ["Werk/Unity"] }
+  - id: werk-vve-korenaarstraat
+    match: { from_domain: [rgp.com, ronlos.nl] }
+    actions: { add_labels: ["Werk/VVE-korenaarstraat"] }
+  - id: werk-webdevelopment
+    match: { from_domain: [heartoday.org] }
+    actions: { add_labels: ["Werk/Webdevelopment"] }
+  - id: werk-carousel
+    match: { from_domain: [das-lab.nl] }
+    actions: { add_labels: ["Werk/carousel"] }
+  - id: werk-kraan
+    match: { from_domain: [irishaug.nl] }
+    actions: { add_labels: ["Werk/kraan"] }
+  - id: werk-recruitment
+    match: { from_domain: [xebia.com, ordina.nl] }
+    actions: { add_labels: ["Werk/recruitment"] }
+  - id: werk-vimexx
+    match: { from_domain: [vimexx.nl] }
+    actions: { add_labels: ["Werk/vimexx"] }
+  - id: business-design
+    match: { from_domain: [affinity.store] }
+    actions: { add_labels: ["business/design"] }
+  - id: conferenties-jcrete2026
+    match: { from_domain: [javaspecialists.eu, googlegroups.com, kodewerk.com, schauderhaft.de] }
+    actions: { add_labels: ["conferenties/JCrete2026"] }
+  - id: hypotheek
+    match: { from_domain: [bollenstreekmakelaars.nl, penp.nl, notarissen.tv, rvo.nl, servicehouse.nl] }
+    actions: { add_labels: ["hypotheek"] }
+  - id: meetups
+    match: { from_domain: [email.meetup.com] }
+    actions: { add_labels: ["meetups"] }
+  - id: palmsuikerweg
+    match: { from_domain: [bmdaktechniek.nl, meditel.nl, nielsmons.nl, blauweeik.nl, gk-timmerwerken.nl, bouwadviesxxl.nl] }
+    actions: { add_labels: ["palmsuikerweg"] }
+  - id: palmsuikerweg-keuken
+    match: { from_domain: [electrolux.nl] }
+    actions: { add_labels: ["palmsuikerweg/keuken"] }
+  - id: palmsuikerweg-scheiden
+    match: { from_domain: [hypotheekshop.nl, stater.nl] }
+    actions: { add_labels: ["palmsuikerweg/scheiden"] }
+  - id: recruiters
+    match: { from_domain: [codeguild.nl] }
+    actions: { add_labels: ["recruiters"] }
+  - id: spaans
+    match: { from_domain: [bestspanishteacher.com, cervantes.es] }
+    actions: { add_labels: ["spaans"] }
+  - id: spaans-habladoresutrecht
+    match: { from_domain: [taxamo.com, duolingo.com, quaderno.io] }
+    actions: { add_labels: ["spaans/habladoresUtrecht"] }
+  - id: spaans-habladoresutrecht-kaartspel
+    match: { from_domain: [roemspeelkaarten.nl] }
+    actions: { add_labels: ["spaans/habladoresUtrecht/kaartspel"] }
+  - id: vrijwillig
+    match: { from_domain: [nederlandcares.nl] }
+    actions: { add_labels: ["vrijwillig"] }
+  - id: werk-miranda
+    match: { from_domain: [rcdeleeuw.nl] }
+    actions: { add_labels: ["werk/Miranda"] }
