@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from contextlib import nullcontext
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -49,6 +50,18 @@ def _build_plan(rules: Path, factory):  # type: ignore[no-untyped-def]
     return messages, current, plan_mutations(classifications, current)
 
 
+def _render_plan(plans, messages, *, verbose: bool, pager: bool) -> None:  # type: ignore[no-untyped-def]
+    """Render the plan table + metrics, optionally through the system pager.
+
+    With ``pager=True`` output is piped through $PAGER (less). For colours the
+    pager must pass ANSI through — e.g. ``PAGER='less -R'`` or ``LESS=-R``.
+    """
+    ctx = console.pager(styles=True) if pager else nullcontext()
+    with ctx:
+        render_plan(plans, messages, console=console, verbose=verbose)
+        render_metrics(summarize(plans, scanned=len(messages)), console=console)
+
+
 @app.command()
 def classify(
     rules: Path = typer.Option(  # noqa: B008 - Typer option factory
@@ -57,6 +70,9 @@ def classify(
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Show which rule(s) matched each message."
     ),
+    pager: bool = typer.Option(
+        False, "--pager", help="Page output through $PAGER (less). Use PAGER='less -R' for colour."
+    ),
 ) -> None:
     """Classify cached mail and print a dry-run report (no changes applied)."""
     if not rules.exists():
@@ -64,8 +80,7 @@ def classify(
         raise typer.Exit(code=2)
     factory = session_factory(paths.db_path())
     messages, _current, plans = _build_plan(rules, factory)
-    render_plan(plans, messages, console=console, verbose=verbose)
-    render_metrics(summarize(plans, scanned=len(messages)), console=console)
+    _render_plan(plans, messages, verbose=verbose, pager=pager)
 
 
 @app.command()
@@ -116,6 +131,9 @@ def apply(
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Show which rule(s) matched each message."
     ),
+    pager: bool = typer.Option(
+        False, "--pager", help="Page output through $PAGER (less). Use PAGER='less -R' for colour."
+    ),
 ) -> None:
     """Apply the classification plan to Gmail. Writes changes unless --dry-run."""
     if not rules.exists():
@@ -123,8 +141,7 @@ def apply(
         raise typer.Exit(code=2)
     factory = session_factory(paths.db_path())
     messages, current, plans = _build_plan(rules, factory)
-    render_plan(plans, messages, console=console, verbose=verbose)
-    render_metrics(summarize(plans, scanned=len(messages)), console=console)
+    _render_plan(plans, messages, verbose=verbose, pager=pager)
 
     if dry_run:
         console.print("[yellow]dry-run[/] — no changes applied.")

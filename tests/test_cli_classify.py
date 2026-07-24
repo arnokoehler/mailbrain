@@ -57,6 +57,19 @@ def test_classify_reports_planned_changes(monkeypatch, tmp_path):
     assert "archived 1" in result.output  # booking rule archives, message is in INBOX
 
 
+def test_classify_pager_flag_still_renders(monkeypatch, tmp_path):
+    home = tmp_path / "mb"
+    monkeypatch.setenv("MAILBRAIN_HOME", str(home))
+    home.mkdir(parents=True)
+    _seed(home / "state.db")
+    rules = _write_rules(tmp_path)
+    monkeypatch.setenv("PAGER", "cat")  # non-interactive pager for the test
+
+    result = runner.invoke(app, ["classify", "--rules", str(rules), "--pager"])
+    assert result.exit_code == 0, result.output
+    assert "Reizen" in result.output
+
+
 def test_classify_empty_db_is_clean(monkeypatch, tmp_path):
     home = tmp_path / "mb"
     monkeypatch.setenv("MAILBRAIN_HOME", str(home))
