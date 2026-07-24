@@ -58,9 +58,17 @@ rules:
   - id: administratie-auto
     match: { from_domain: [mywheels.nl, ubench.com, euromaster.com, nefkens.nl, wiberrentacar.com, mhcmobility.nl, sunnycars.nl, volkswagen.de, muntstad.nl, biemondvanwijk.nl, asnmail.nl, kavautoverhuur.nl, care-mail.nl, rdw.nl, cartrawler.com] }
     actions: { add_labels: ["Administratie/Auto"] }
+  # ah.nl is mixed (payslips, recipes, deals) - no clean domain signal.
+  # Payslips are matched by subject instead so recipe/deal mail isn't mislabeled.
   - id: administratie-loonstrook
-    match: { from_domain: [ah.nl] }
+    match: { subject_contains: [loonstrook, salarisspecificatie, salarisstrook] }
     actions: { add_labels: ["Administratie/Loonstrook"] }
+  - id: administratie-korting
+    match:
+      subject_contains: [cadeaubon, cadeaukaart, cadeautje, kortingscode, "korting", "cadeau van", voucher]
+    exclude:
+      subject_contains: [bewonerskorting]  # municipal parking permit, not a coupon
+    actions: { add_labels: ["Administratie/Korting"] }
   - id: administratie-vakantie
     match: { from_domain: [arkefly.nl] }
     actions: { add_labels: ["Administratie/Vakantie"] }
@@ -116,7 +124,7 @@ rules:
     match: { from_domain: [exploringdeeper.com] }
     actions: { add_labels: ["Daily/kink"] }
   - id: kennis-training
-    match: { from_domain: [jpeople.co.uk, geekle.us, trainalseenoermensindestad.nl] }
+    match: { from_domain: [geekle.us, trainalseenoermensindestad.nl] }
     actions: { add_labels: ["Kennis/Training"] }
   - id: kennis-meetup
     match: { from_domain: [offerzen.com] }
@@ -206,7 +214,7 @@ rules:
     match: { from_domain: [irishaug.nl] }
     actions: { add_labels: ["Werk/kraan"] }
   - id: werk-recruitment
-    match: { from_domain: [xebia.com, ordina.nl] }
+    match: { from_domain: [xebia.com, ordina.nl, jpeople.co.uk] }
     actions: { add_labels: ["Werk/recruitment"] }
   - id: werk-vimexx
     match: { from_domain: [vimexx.nl] }
