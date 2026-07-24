@@ -38,6 +38,17 @@ def init() -> None:
     console.print(f"[green]Initialized MailBrain at[/] {app_dir}")
 
 
+def _build_plan(rules: Path, factory):  # type: ignore[no-untyped-def]
+    """Load the cache, classify against `rules`, and diff to planned mutations.
+
+    Shared by `classify` (preview) and `apply` so both derive the plan the
+    same way. Returns (messages, current_labels, plans).
+    """
+    messages, current = load_cached(factory)
+    classifications = classify_messages(messages, config.load_rules(rules).rules, datetime.now(UTC))
+    return messages, current, plan_mutations(classifications, current)
+
+
 @app.command()
 def classify(
     rules: Path = typer.Option(  # noqa: B008 - Typer option factory
@@ -51,14 +62,10 @@ def classify(
     if not rules.exists():
         console.print(f"[red]Rules file not found:[/] {rules}")
         raise typer.Exit(code=2)
-    rules_file = config.load_rules(rules)
     factory = session_factory(paths.db_path())
-    messages, current = load_cached(factory)
-    classifications = classify_messages(messages, rules_file.rules, datetime.now(UTC))
-    plans = plan_mutations(classifications, current)
-    metrics = summarize(plans, scanned=len(messages))
+    messages, _current, plans = _build_plan(rules, factory)
     render_plan(plans, messages, console=console, verbose=verbose)
-    render_metrics(metrics, console=console)
+    render_metrics(summarize(plans, scanned=len(messages)), console=console)
 
 
 @app.command()
@@ -100,28 +107,30 @@ def apply(
     rules: Path = typer.Option(  # noqa: B008 - Typer option factory
         Path("config/rules.yaml"), "--rules", help="Path to rules YAML."
     ),
-    execute: bool = typer.Option(
-        False, "--execute", help="Actually apply changes to Gmail (default: dry-run)."
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Preview the plan without writing anything to Gmail."
+    ),
+    yes: bool = typer.Option(
+        False, "--yes", "-y", help="Skip the confirmation prompt (for scripts)."
     ),
     verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Show which rule(s) matched each message (dry-run)."
+        False, "--verbose", "-v", help="Show which rule(s) matched each message."
     ),
 ) -> None:
-    """Apply the classification plan to Gmail. Dry-run unless --execute is given."""
+    """Apply the classification plan to Gmail. Writes changes unless --dry-run."""
     if not rules.exists():
         console.print(f"[red]Rules file not found:[/] {rules}")
         raise typer.Exit(code=2)
     factory = session_factory(paths.db_path())
-    messages, current = load_cached(factory)
-    classifications = classify_messages(
-        messages, config.load_rules(rules).rules, datetime.now(UTC)
-    )
-    plans = plan_mutations(classifications, current)
+    messages, current, plans = _build_plan(rules, factory)
+    render_plan(plans, messages, console=console, verbose=verbose)
+    render_metrics(summarize(plans, scanned=len(messages)), console=console)
 
-    if not execute:
-        render_plan(plans, messages, console=console, verbose=verbose)
-        render_metrics(summarize(plans, scanned=len(messages)), console=console)
-        console.print("[yellow]dry-run[/] — no changes applied. Re-run with --execute to apply.")
+    if dry_run:
+        console.print("[yellow]dry-run[/] — no changes applied.")
+        return
+    if not plans:
+        console.print("Nothing to apply.")
         return
 
     if not paths.credentials_path().exists():
@@ -131,6 +140,8 @@ def apply(
             "(see README)."
         )
         raise typer.Exit(code=2)
+    if not yes:
+        typer.confirm(f"Apply {len(plans)} change(s) to Gmail?", abort=True)
     creds = load_credentials(paths.credentials_path(), paths.token_path())
     client = GmailClient(build_service(creds))
     run_id = execute_plan(client, factory, plans, current)

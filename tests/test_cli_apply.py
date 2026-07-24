@@ -44,37 +44,47 @@ def _rules(tmp_path):
     return p
 
 
-def test_apply_dry_run_by_default_does_not_execute(monkeypatch, tmp_path):
+def _prep(monkeypatch, tmp_path, creds=True):
     home = tmp_path / "mb"
     monkeypatch.setenv("MAILBRAIN_HOME", str(home))
     home.mkdir(parents=True)
     _seed(home)
+    if creds:
+        (home / "credentials.json").write_text("{}")
+    return home
 
+
+def test_apply_dry_run_flag_previews_without_executing(monkeypatch, tmp_path):
+    _prep(monkeypatch, tmp_path, creds=False)
     called = {"execute": False}
+    monkeypatch.setattr(cli, "execute_plan", lambda *a, **k: called.__setitem__("execute", True))
 
-    def _no_execute(*a, **k):
-        called.__setitem__("execute", True)
-        return 1
-
-    monkeypatch.setattr(cli, "execute_plan", _no_execute)
-
-    result = runner.invoke(app, ["apply", "--rules", str(_rules(tmp_path))])
+    result = runner.invoke(app, ["apply", "--rules", str(_rules(tmp_path)), "--dry-run"])
     assert result.exit_code == 0, result.output
     assert called["execute"] is False
     assert "dry-run" in result.output.lower()
     assert "Reizen" in result.output
 
 
-def test_apply_execute_calls_executor(monkeypatch, tmp_path):
-    home = tmp_path / "mb"
-    monkeypatch.setenv("MAILBRAIN_HOME", str(home))
-    home.mkdir(parents=True)
-    _seed(home)
-
-    captured = {}
+def test_apply_aborts_when_user_declines_prompt(monkeypatch, tmp_path):
+    _prep(monkeypatch, tmp_path)
+    called = {"execute": False}
     monkeypatch.setattr(cli, "load_credentials", lambda c, t: object())
     monkeypatch.setattr(cli, "build_service", lambda creds: object())
     monkeypatch.setattr(cli, "GmailClient", lambda service: "CLIENT")
+    monkeypatch.setattr(cli, "execute_plan", lambda *a, **k: called.__setitem__("execute", True))
+
+    result = runner.invoke(app, ["apply", "--rules", str(_rules(tmp_path))], input="n\n")
+    assert result.exit_code != 0  # aborted
+    assert called["execute"] is False
+
+
+def test_apply_executes_when_user_confirms(monkeypatch, tmp_path):
+    _prep(monkeypatch, tmp_path)
+    monkeypatch.setattr(cli, "load_credentials", lambda c, t: object())
+    monkeypatch.setattr(cli, "build_service", lambda creds: object())
+    monkeypatch.setattr(cli, "GmailClient", lambda service: "CLIENT")
+    captured = {}
 
     def fake_execute(client, factory, plans, current):
         captured["client"] = client
@@ -82,21 +92,36 @@ def test_apply_execute_calls_executor(monkeypatch, tmp_path):
         return 42
 
     monkeypatch.setattr(cli, "execute_plan", fake_execute)
-    (home / "credentials.json").write_text("{}")
 
-    result = runner.invoke(app, ["apply", "--rules", str(_rules(tmp_path)), "--execute"])
+    result = runner.invoke(app, ["apply", "--rules", str(_rules(tmp_path))], input="y\n")
     assert result.exit_code == 0, result.output
     assert captured["client"] == "CLIENT"
     assert captured["n"] == 1
     assert "42" in result.output
 
 
-def test_apply_execute_missing_credentials_errors(monkeypatch, tmp_path):
-    home = tmp_path / "mb"
-    monkeypatch.setenv("MAILBRAIN_HOME", str(home))
-    home.mkdir(parents=True)
-    _seed(home)
+def test_apply_yes_skips_prompt_and_executes(monkeypatch, tmp_path):
+    _prep(monkeypatch, tmp_path)
+    monkeypatch.setattr(cli, "load_credentials", lambda c, t: object())
+    monkeypatch.setattr(cli, "build_service", lambda creds: object())
+    monkeypatch.setattr(cli, "GmailClient", lambda service: "CLIENT")
+    captured = {}
 
-    result = runner.invoke(app, ["apply", "--rules", str(_rules(tmp_path)), "--execute"])
+    def fake_execute(client, factory, plans, current):
+        captured["n"] = len(plans)
+        return 7
+
+    monkeypatch.setattr(cli, "execute_plan", fake_execute)
+
+    # no stdin provided; --yes must mean no prompt is read
+    result = runner.invoke(app, ["apply", "--rules", str(_rules(tmp_path)), "--yes"])
+    assert result.exit_code == 0, result.output
+    assert captured["n"] == 1
+    assert "7" in result.output
+
+
+def test_apply_missing_credentials_errors(monkeypatch, tmp_path):
+    _prep(monkeypatch, tmp_path, creds=False)
+    result = runner.invoke(app, ["apply", "--rules", str(_rules(tmp_path)), "--yes"])
     assert result.exit_code == 2
     assert "credentials.json not found" in result.output
