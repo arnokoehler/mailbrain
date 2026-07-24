@@ -8,7 +8,7 @@ rules:
     match: { from_domain: [westland.rabobank.nl, gamma.nl, pwn.nl, my-energie.nl, supernews.com, mail.marktplaats.nl] }
     actions: { add_labels: ["Administratie"] }
   - id: administratie-aankopen
-    match: { from_domain: [edm.postnl.nl, notice.aliexpress.com, kaartje2go.nl, berrydemey.com, dhlecommerce.nl, fonq.nl, elektramat.nl, mantel.com, jysk.com, oypo.nl, internetshop.nl, gsmpunt.nl, calm.com, topbloemen.nl, thermowear.nl, tubeclamps.nl, redjepakketje.com, verfgroothandel.nl, email.greetz.nl, e.greetz.nl, plutosport.nl, e.drukwerkdeal.nl, servicemail.fonq.nl, athleteshop-00ac2ebb91f8.intercom-mail.com, karwei.nl, onlineshop.adidas.nl, norrod.nl, maxict.nl, hotsoup.nl, uwantisell.nl, futurumshop.nl, service.ibood.com, bobshop.nl, perfectbody.nl, famed.nl, sendcloud.com, hornbach.nl, kruidvat.nl, xxlnutrition.com, sbdapparel.nl, mediamarkt.nl, efarma.nl, steigerbuisgroothandel.nl, delivery-status.com, e.kwantum.nl, hallmark.nl, feestwinkelxl.nl, ne.nl, poeba.nl, taxivandalfsen.nl, sossolutions.nl, broekumgroep.nl, zooplus.nl] }
+    match: { from_domain: [edm.postnl.nl, notice.aliexpress.com, kaartje2go.nl, berrydemey.com, dhlecommerce.nl, fonq.nl, elektramat.nl, mantel.com, jysk.com, oypo.nl, internetshop.nl, gsmpunt.nl, calm.com, topbloemen.nl, thermowear.nl, tubeclamps.nl, redjepakketje.com, verfgroothandel.nl, email.greetz.nl, e.greetz.nl, plutosport.nl, e.drukwerkdeal.nl, servicemail.fonq.nl, athleteshop-00ac2ebb91f8.intercom-mail.com, karwei.nl, onlineshop.adidas.nl, norrod.nl, maxict.nl, hotsoup.nl, uwantisell.nl, futurumshop.nl, service.ibood.com, bobshop.nl, perfectbody.nl, famed.nl, sendcloud.com, hornbach.nl, kruidvat.nl, xxlnutrition.com, sbdapparel.nl, mediamarkt.nl, efarma.nl, steigerbuisgroothandel.nl, delivery-status.com, e.kwantum.nl, hallmark.nl, feestwinkelxl.nl, ne.nl, poeba.nl, taxivandalfsen.nl, sossolutions.nl, broekumgroep.nl, zooplus.nl, ikea.com, spotify.com] }
     actions: { add_labels: ["Administratie/Aankopen"] }
   - id: administratie-aankopen-amazon
     match: { from_domain: [amazon.com, audible.com] }
@@ -20,7 +20,7 @@ rules:
     match: { from_domain: [midjourney.com, discord.com] }
     actions: { add_labels: ["Administratie/Aankopen/discorcd"] }
   - id: administratie-aankopen-games
-    match: { from_domain: [steampowered.com] }
+    match: { from_domain: [steampowered.com, accounts.nintendo.com] }
     actions: { add_labels: ["Administratie/Aankopen/games"] }
   - id: administratie-aankopen-kiwico
     match: { from_domain: [deposco.com, kiwico.com] }
@@ -32,7 +32,7 @@ rules:
     match: { from_domain: [moonheels.nl] }
     actions: { add_labels: ["Administratie/Aankopen/outfit"] }
   - id: administratie-aankopen-pakketjes
-    match: { from_domain: [kurk24.nl, muurbeugel.nl, haarimport.nl] }
+    match: { from_domain: [kurk24.nl, muurbeugel.nl, haarimport.nl, dhlparcel.nl] }
     actions: { add_labels: ["Administratie/Aankopen/pakketjes"] }
   - id: administratie-aankopen-pakketjes-body-fit
     match: { from_domain: [bodyenfitshop.nl, e.bodyandfit.com] }
@@ -91,7 +91,7 @@ rules:
     match: { from_domain: [one2track.nl] }
     actions: { add_labels: ["Administratie/jamie/one2track"] }
   - id: administratie-leaseauto
-    match: { from_domain: [leaseresult.nl] }
+    match: { from_domain: [leaseresult.nl, iodigital.com] }
     actions: { add_labels: ["Administratie/leaseauto"] }
   - id: administratie-pensioen
     match: { from_domain: [klmgrondfonds.nl, e.stippensioen.nl, mijnwerknemerspensioen.asr.nl, insight.nn.nl] }
@@ -100,7 +100,7 @@ rules:
     match: { from_domain: [vandebron.nl, budgetallesin1.nl, welwonend.nl, greenchoice.nl, nba-zonnepanelen.nl, groenpand.nl, elite-wellness.nl, atlaspower.nl, calcasa.nl, mailgb.custhelp.com, elektroshop.nl, feikencv.nl, onderhoudsbedrijfbos.nl, atagbenelux.com, guidion.nl, ajtec.nl, bk-elektro.nl, vanheesen.nl] }
     actions: { add_labels: ["Administratie/pijnenburg 6 vleuten"] }
   - id: administratie-telefoon
-    match: { from_domain: [service.tele2.nl, sales.tele2.nl, ctdi.eu, oneplus.net, mail.tele2.nl] }
+    match: { from_domain: [service.tele2.nl, sales.tele2.nl, ctdi.eu, oneplus.net, mail.tele2.nl, odido.nl] }
     actions: { add_labels: ["Administratie/telefoon"] }
   - id: administratie-tickets
     match: { from_domain: [mrblackandthewhiteox.com, ticketveiling.nl, email.ticketmaster.nl] }
@@ -109,8 +109,17 @@ rules:
     match: { from_domain: [ns.nl, ov-chipkaart.nl, email.ns.nl] }
     actions: { add_labels: ["Administratie/trein"] }
   - id: administratie-zorg
-    match: { from_domain: [zorgmail.nl] }
+    match: { from_domain: [zorgmail.nl, vgzbewuzt.nl] }
     actions: { add_labels: ["Administratie/zorg"] }
+  - id: administratie-tandarts
+    match: { from_domain: [tpgz.nl] }
+    actions: { add_labels: ["Administratie/tandarts"] }
+  - id: linkedin
+    match: { from_domain: [linkedin.com] }
+    actions: { add_labels: ["Daily/Social Media/linkedin"] }
+  - id: albertheijn
+    match: { from_domain: [aholddelhaize.com] }
+    actions: { add_labels: ["AlbertHeijn"] }
   - id: albrecht-thaerlaan-57
     match: { from_domain: [deruitermakelaarshuis.nl, vangrafhorst.nl, servicemail.energiedirect.nl, mail.odido.nl, dakcentralenederland.nl, drostedevries.com, paolokyc.com, samen.greenchoice.nl, verhoefdakramen.nl, basmakelaars.nl] }
     actions: { add_labels: ["Albrecht Thaerlaan 57"] }
