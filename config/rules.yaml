@@ -1,91 +1,543 @@
+# Generated from existing Gmail labels: vendor domains that map >=70% to one label.
+# Personal mail (gmail/hotmail/etc.) is intentionally excluded - not domain-separable.
+_vocab:
+  # Second screening axis: is this mail transactional or promotional?
+  # Gmail's own CATEGORY_PROMOTIONS is the high-precision signal; the subject
+  # tokens only cover wording that never appears in a real order confirmation.
+  transactional_subject: &transactional_subject
+    [bestelling, order, factuur, invoice, receipt, betaling, betaald, bezorgd, bezorging,
+      verzonden, shipped, delivered, retour, return, pakket, verzending, geleverd, levering,
+      bevestiging, confirmation, afhaal, boardingpas, reservering, renewal, subscription,
+      abonnement, verlenging, loonstrook, salaris, salarisspecificatie, transactiebewijs,
+      ontvangstbewijs, "je bon", betaalbewijs]
+  # Commercial-intent wording. Ads happily quote transactional words ("20%
+  # korting op je bestelling", "GRATIS bezorging"), so a transactional screen
+  # needs this as its own carve-out or it drags adverts back into the inbox.
+  promo_wording: &promo_wording
+    [korting, kortingscode, deal, deals, aanbieding, gratis, bespaar, voordeel, actie,
+      "% off", "scoor", "mega", cadeautip, "alleen dit weekend", "alleen vandaag",
+      "laatste kans", "laatste dag", sale, uitverkoop, opruiming, outlet, giveaway,
+      bonus, "shop nu", "shop de", topdeals, prijsfavorieten, "black friday",
+      "cyber monday", "back to school", voordeelweken, "flash sale"]
+  promo_screen: &promo_screen
+    # Gmail's promotional bucket vetoes a vendor label, but only when the
+    # subject does not read as a real transaction - Gmail misfiles those too.
+    - has_label: [CATEGORY_PROMOTIONS]
+      subject_not_contains: *transactional_subject
+    - subject_contains: ["laatste kans", "laatste dag", sale, uitverkoop, opruiming,
+        "black friday", "cyber monday", "back to school", topdeals, prijsfavorieten,
+        "% off", outlet, "flash sale", giveaway, voordeelweken, "alleen vandaag"]
+      subject_not_contains: *transactional_subject
+
 rules:
-  - id: booking-payment
+  - id: acties
+    match: { from_domain: [takeaction.greatergood.com] }
+    actions: { add_labels: ["Acties"] }
+  - id: administratie
+    match: { from_domain: [westland.rabobank.nl, gamma.nl, pwn.nl, my-energie.nl, supernews.com, mail.marktplaats.nl] }
+    actions: { add_labels: ["Administratie"] }
+  - id: administratie-aankopen
+    match: { from_domain: [edm.postnl.nl, notice.aliexpress.com, kaartje2go.nl, berrydemey.com, dhlecommerce.nl, fonq.nl, elektramat.nl, mantel.com, jysk.com, oypo.nl, internetshop.nl, gsmpunt.nl, calm.com, topbloemen.nl, thermowear.nl, tubeclamps.nl, redjepakketje.com, verfgroothandel.nl, email.greetz.nl, e.greetz.nl, plutosport.nl, e.drukwerkdeal.nl, servicemail.fonq.nl, athleteshop-00ac2ebb91f8.intercom-mail.com, karwei.nl, onlineshop.adidas.nl, norrod.nl, maxict.nl, hotsoup.nl, uwantisell.nl, futurumshop.nl, service.ibood.com, bobshop.nl, perfectbody.nl, famed.nl, sendcloud.com, hornbach.nl, kruidvat.nl, xxlnutrition.com, sbdapparel.nl, mediamarkt.nl, efarma.nl, steigerbuisgroothandel.nl, delivery-status.com, e.kwantum.nl, hallmark.nl, feestwinkelxl.nl, ne.nl, poeba.nl, taxivandalfsen.nl, sossolutions.nl, broekumgroep.nl, zooplus.nl, ikea.com, spotify.com] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen"] }
+  - id: administratie-aankopen-amazon
+    match: { from_domain: [amazon.com, audible.com] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/amazon"] }
+  - id: administratie-aankopen-apple
+    match: { from_domain: [email.apple.com] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/apple"] }
+  - id: administratie-aankopen-discorcd
+    match: { from_domain: [midjourney.com, discord.com] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/discorcd"] }
+  - id: administratie-aankopen-games
+    match: { from_domain: [steampowered.com, accounts.nintendo.com] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/games"] }
+  - id: administratie-aankopen-kiwico
+    match: { from_domain: [deposco.com, kiwico.com] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/kiwico"] }
+  - id: administratie-aankopen-meubels
+    match: { from_domain: [molenaarmeubelen.nl, wifimedia.eu] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/meubels"] }
+  - id: administratie-aankopen-outfit
+    match: { from_domain: [moonheels.nl] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/outfit"] }
+  - id: administratie-aankopen-pakketjes
+    match: { from_domain: [kurk24.nl, muurbeugel.nl, haarimport.nl, dhlparcel.nl] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/pakketjes"] }
+  - id: administratie-aankopen-pakketjes-body-fit
+    match: { from_domain: [bodyenfitshop.nl, e.bodyandfit.com] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/pakketjes/body&fit"] }
+  - id: administratie-aankopen-pakketjes-bol-com
+    match: { from_domain: [bol.com, verkopen.bol.com] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/pakketjes/bol.com"] }
+  - id: administratie-aankopen-pakketjes-coolblue
+    match: { from_domain: [coolblue.nl, bezorging.coolblue.nl] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/pakketjes/coolblue"] }
+  - id: administratie-aankopen-pakketjes-decathlon
+    match: { from_domain: [decathlon.nl, decathlon.com] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/pakketjes/decathlon"] }
+  - id: administratie-aankopen-pakketjes-vodafone
+    match: { from_domain: [informatie.vodafone.nl] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/pakketjes/vodafone"] }
+  - id: administratie-aankopen-thuisbezorgd-nl
+    match: { from_domain: [update.thuisbezorgd.nl] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/thuisbezorgd.nl"] }
+  - id: administratie-accounts
+    match: { from_domain: [dealextreme.com, support.hitnews.eu, whizlabs.com, route.monster.com, newsgrabber.nl, ebay.nl, ticketservice.nl, newzbin.com, checkout.google.com, p-less.nl, yourdomain.com, filesonic.com, courier.qwiki.com, yunoo.nl, nieuwsbrief.eci.nl, james4you.nl, rapidshare.com, yabnews.nl, gobella.nl, alternate.nl, zoekbijbaan.nl, erasmusmc.nl] }
+    actions: { add_labels: ["Administratie/Accounts"] }
+  - id: administratie-auto
+    match: { from_domain: [mywheels.nl, ubench.com, euromaster.com, nefkens.nl, wiberrentacar.com, mhcmobility.nl, sunnycars.nl, volkswagen.de, muntstad.nl, biemondvanwijk.nl, asnmail.nl, kavautoverhuur.nl, care-mail.nl, rdw.nl, cartrawler.com] }
+    actions: { add_labels: ["Administratie/Auto"] }
+  # ah.nl is mixed (payslips, recipes, deals) - no clean domain signal.
+  # Payslips are matched by subject instead so recipe/deal mail isn't mislabeled.
+  - id: administratie-loonstrook
+    match: { subject_contains: [loonstrook, salarisspecificatie, salarisstrook] }
+    actions: { add_labels: ["Administratie/Loonstrook"] }
+  - id: administratie-korting
+    match:
+      subject_contains: [cadeaubon, cadeaukaart, cadeautje, kortingscode, "korting", "cadeau van", voucher]
+    exclude:
+      - subject_contains: [bewonerskorting]  # municipal parking permit, not a coupon
+      - from_domain: [utrecht.nl]  # parking-permit notices mention korting but are admin
+    actions: { add_labels: ["Administratie/Korting"] }
+  - id: administratie-vakantie
+    match: { from_domain: [arkefly.nl] }
+    actions: { add_labels: ["Administratie/Vakantie"] }
+  - id: administratie-vakantie-barcelona
+    match: { from_domain: [ext.sagradafamilia.org, sagradafamilia.org, t1.tripadvisor.com] }
+    actions: { add_labels: ["Administratie/Vakantie/Barcelona"] }
+  - id: administratie-vakantie-rome
+    match: { from_domain: [tiqets.com, citywonders.com] }
+    actions: { add_labels: ["Administratie/Vakantie/rome"] }
+  - id: administratie-dokter
+    match: { from_domain: [saltro.nl] }
+    actions: { add_labels: ["Administratie/dokter"] }
+  - id: administratie-huis-huizenjacht
+    match: { from_domain: [beumer.nl, esteon.com, stairway-utrecht.nl, leeuweplaats.nl] }
+    actions: { add_labels: ["Administratie/huis/huizenjacht"] }
+  - id: administratie-jamie
+    match: { from_domain: [fantaziehuis.nl, saartje.nl, ouderportaal.nl, kindergarden.nl, ksu-utrecht.nl, e.kindergarden.nl, unilabs.com, uwtandarts.online, bueno.nu] }
+    actions: { add_labels: ["Administratie/jamie"] }
+  - id: administratie-jamie-one2track
+    match: { from_domain: [one2track.nl] }
+    actions: { add_labels: ["Administratie/jamie/one2track"] }
+  # iodigital.com is the employer domain (investor updates, trainings, payslips),
+  # not a lease vendor - the >=70% derivation overfitted on a lease-heavy period.
+  # Lease mail from iO is matched by subject instead.
+  - id: administratie-leaseauto
+    match: { from_domain: [leaseresult.nl] }
+    actions: { add_labels: ["Administratie/leaseauto"] }
+  - id: administratie-leaseauto-io-subject
+    match:
+      from_domain: [iodigital.com]
+      subject_contains: [leaseauto, "mhc mobility", "inname auto", leasecontract]
+    actions: { add_labels: ["Administratie/leaseauto"] }
+  - id: werk-iofrontmen-domain
+    match: { from_domain: [iodigital.com] }
+    actions: { add_labels: ["Werk/iOFrontmen"] }
+  - id: administratie-pensioen
+    match: { from_domain: [klmgrondfonds.nl, e.stippensioen.nl, mijnwerknemerspensioen.asr.nl, insight.nn.nl] }
+    actions: { add_labels: ["Administratie/pensioen"] }
+  - id: administratie-pijnenburg-6-vleuten
+    match: { from_domain: [vandebron.nl, budgetallesin1.nl, welwonend.nl, greenchoice.nl, nba-zonnepanelen.nl, groenpand.nl, elite-wellness.nl, atlaspower.nl, calcasa.nl, mailgb.custhelp.com, elektroshop.nl, feikencv.nl, onderhoudsbedrijfbos.nl, atagbenelux.com, guidion.nl, ajtec.nl, bk-elektro.nl, vanheesen.nl] }
+    actions: { add_labels: ["Administratie/pijnenburg 6 vleuten"] }
+  - id: administratie-telefoon
+    match: { from_domain: [service.tele2.nl, sales.tele2.nl, ctdi.eu, oneplus.net, mail.tele2.nl, odido.nl] }
+    actions: { add_labels: ["Administratie/telefoon"] }
+  - id: administratie-tickets
+    match: { from_domain: [mrblackandthewhiteox.com, ticketveiling.nl, email.ticketmaster.nl] }
+    actions: { add_labels: ["Administratie/tickets"] }
+  - id: administratie-trein
+    match: { from_domain: [ns.nl, ov-chipkaart.nl, email.ns.nl] }
+    actions: { add_labels: ["Administratie/trein"] }
+  - id: administratie-zorg
+    match: { from_domain: [zorgmail.nl, vgzbewuzt.nl] }
+    actions: { add_labels: ["Administratie/zorg"] }
+  - id: administratie-tandarts
+    match: { from_domain: [tpgz.nl] }
+    actions: { add_labels: ["Administratie/tandarts"] }
+  - id: linkedin
+    match: { from_domain: [linkedin.com] }
+    actions: { add_labels: ["Daily/Social Media/linkedin"] }
+  - id: albertheijn
+    match: { from_domain: [aholddelhaize.com] }
+    actions: { add_labels: ["AlbertHeijn"] }
+  - id: albrecht-thaerlaan-57
+    match: { from_domain: [deruitermakelaarshuis.nl, vangrafhorst.nl, servicemail.energiedirect.nl, mail.odido.nl, dakcentralenederland.nl, drostedevries.com, paolokyc.com, samen.greenchoice.nl, verhoefdakramen.nl, basmakelaars.nl] }
+    actions: { add_labels: ["Albrecht Thaerlaan 57"] }
+  - id: beleggen
+    match: { from_domain: [getbux.com, tldrnewsletter.com] }
+    actions: { add_labels: ["Beleggen"] }
+  - id: beleggen-degiro
+    match: { from_domain: [mail.degiro.com] }
+    actions: { add_labels: ["Beleggen/deGiro"] }
+  - id: daily-kink
+    match: { from_domain: [exploringdeeper.com] }
+    actions: { add_labels: ["Daily/kink"] }
+  - id: kennis-training
+    match: { from_domain: [geekle.us, trainalseenoermensindestad.nl] }
+    actions: { add_labels: ["Kennis/Training"] }
+  - id: kennis-meetup
+    match: { from_domain: [offerzen.com] }
+    actions: { add_labels: ["Kennis/meetup"] }
+  - id: notes-time-management
+    match: { from_domain: [wakkerdier.nl] }
+    actions: { add_labels: ["Notes/Time Management"] }
+  - id: persoonlijk
+    match: { from_domain: [kuleuven.be, profijt-naaldwijk.nl] }
+    actions: { add_labels: ["Persoonlijk"] }
+  - id: persoonlijk-fetlife
+    match: { from_domain: [secret-underground.com] }
+    actions: { add_labels: ["Persoonlijk/fetlife"] }
+  - id: persoonlijk-petrianne
+    match: { from_domain: [mango.com] }
+    actions: { add_labels: ["Persoonlijk/petrianne"] }
+  - id: persoonlijk-psycholoog
+    match: { from_domain: [mentaalbeter.nl, thecalmme.nl] }
+    actions: { add_labels: ["Persoonlijk/psycholoog"] }
+  - id: persoonlijk-travel
+    match: { from_domain: [visum.nl, incadventures.com] }
+    actions: { add_labels: ["Persoonlijk/travel"] }
+  # booking.com also recruits: colleague-style mail about applications and
+  # assessments is hiring correspondence, not a trip.
+  - id: reizen
+    match: { from_domain: [booking.com, bosmeer.nl, property.booking.com, cpbuitensport.com, vacansoleil.com, parkingshop.com, cars.booking.com, parador.es, i.vacanceselect.com] }
+    exclude:
+      subject_contains: [application, assessment, interview, recruitment, recruiter, vacature,
+        hiring, "your candidacy", "job "]
+    actions: { add_labels: ["Reizen"] }
+  - id: werk-recruitment-booking
     match:
       from_domain: [booking.com]
-      subject_contains: [payment received, receipt]
-    actions:
-      add_labels: [Reizen]
-      archive: true
+      subject_contains: [application, assessment, interview, recruitment, recruiter, vacature,
+        hiring, "your candidacy", "job "]
+    actions: { add_labels: ["Werk/recruitment"] }
+  - id: sport
+    match: { from_domain: [stadswild.nl, goedgevoed-goedgetraind.nl, eventmaker.nl, mudmasters.nl, kartaboardsports.nl, golazo.com, bewarebeach.nl, urbanathlon.nl, thecolorrun.com, mudrunfun.nl, healthcity.nl] }
+    actions: { add_labels: ["Sport"] }
+  - id: sport-cfa
+    match: { from_domain: [mobilisfysio.nl, lowlandsthrowdown.nl, mindbodyonline.com] }
+    actions: { add_labels: ["Sport/CFA"] }
+  - id: sport-fysiofabriek
+    match: { from_domain: [fysiofabriek.nl, spotonmedics.nl] }
+    actions: { add_labels: ["Sport/Fysiofabriek"] }
+  - id: sport-coaching
+    match: { from_domain: [rhino-sportzorg.nl] }
+    actions: { add_labels: ["Sport/coaching"] }
+  - id: sport-coasttocoast
+    match: { from_domain: [12gobiking.nl, ratrace.com] }
+    actions: { add_labels: ["Sport/coasttocoast"] }
+  - id: sport-red-bull
+    match: { from_domain: [events.redbull.com] }
+    actions: { add_labels: ["Sport/red bull"] }
+  - id: sport-salsa
+    match: { from_domain: [unionsalsadancecompany.nl, lasalsa.nl] }
+    actions: { add_labels: ["Sport/salsa"] }
+  - id: sport-unscared
+    match: { from_domain: [trumin.com] }
+    actions: { add_labels: ["Sport/unscared"] }
+  - id: sport-waterpolo
+    match: { from_domain: [uzsc.nl, sportlinkservices.nl] }
+    actions: { add_labels: ["Sport/waterpolo"] }
+  - id: sport-zwemmen
+    match: { from_domain: [zwemmen-utrecht.nl] }
+    actions: { add_labels: ["Sport/zwemmen"] }
+  - id: trouwen
+    match: { from_domain: [dengh.nl, marienwaerdt.nl, reclamedeal.nl, fuif.nl, dehooibergh.nl, email.suitsupply.com, macaronstore.nl, buiten-bruiloft.nl, wimmeeussen.be] }
+    actions: { add_labels: ["Trouwen"] }
+  - id: werk
+    match: { from_domain: [blendle.com, jouwjavavacature.nl, searchitrecruitment.com, jdriven.com, q-logic.nl, rabobank.com, fahr-becker.nl, linkit.nl, bonque.nl, java-recruitment.com] }
+    actions: { add_labels: ["Werk"] }
+  - id: werk-klm
+    match: { from_domain: [mashery.com, xmedia.airfrance.fr, support.digitalocean.com] }
+    actions: { add_labels: ["Werk/KLM"] }
+  - id: werk-pr-totaal
+    match: { from_domain: [trenddevelopment.nl, compose.io, antagonist.nl, haarlem.nl, roberteverstekst.nl] }
+    actions: { add_labels: ["Werk/PR-TOTAAL"] }
+  - id: werk-pr-totaal-oliebollen
+    match: { from_domain: [osn-eventservice.nl] }
+    actions: { add_labels: ["Werk/PR-TOTAAL/oliebollen"] }
+  - id: werk-taken
+    match: { from_domain: [quelmedia.nl] }
+    actions: { add_labels: ["Werk/Taken"] }
+  - id: werk-unity
+    match: { from_domain: [dixm.nl, unitydrugs.nl, context.nl, groenewegen.com, richtlijn.be, 40plusrelatie.nl, novadic-kentron.nl, graffiti.net, krve.nl, versatel.nl, unity.nl, de-bruyn.eu, qpass.com, geurst-schulze.nl, mad.scientist.com, nos.nl, doublem.nl, comsecglobal.com, mentrum.nl, lemon.nl, hkc-europe.com, boomchicago.nl, wapwinkel.nl, noel-vaes.be, bestway-europe.com, bg.fnv.nl, filterz.net, pixami.nl, fury.nl] }
+    actions: { add_labels: ["Werk/Unity"] }
+  - id: werk-vve-korenaarstraat
+    match: { from_domain: [rgp.com, ronlos.nl] }
+    actions: { add_labels: ["Werk/VVE-korenaarstraat"] }
+  - id: werk-webdevelopment
+    match: { from_domain: [heartoday.org] }
+    actions: { add_labels: ["Werk/Webdevelopment"] }
+  - id: werk-carousel
+    match: { from_domain: [das-lab.nl] }
+    actions: { add_labels: ["Werk/carousel"] }
+  - id: werk-kraan
+    match: { from_domain: [irishaug.nl] }
+    actions: { add_labels: ["Werk/kraan"] }
+  - id: werk-recruitment
+    match: { from_domain: [xebia.com, ordina.nl, jpeople.co.uk] }
+    actions: { add_labels: ["Werk/recruitment"] }
+  - id: werk-vimexx
+    match: { from_domain: [vimexx.nl] }
+    actions: { add_labels: ["Werk/vimexx"] }
+  - id: business-design
+    match: { from_domain: [affinity.store] }
+    actions: { add_labels: ["business/design"] }
+  - id: conferenties-jcrete2026
+    match: { from_domain: [javaspecialists.eu, googlegroups.com, kodewerk.com, schauderhaft.de] }
+    actions: { add_labels: ["conferenties/JCrete2026"] }
+  - id: hypotheek
+    match: { from_domain: [bollenstreekmakelaars.nl, penp.nl, notarissen.tv, rvo.nl, servicehouse.nl] }
+    actions: { add_labels: ["hypotheek"] }
+  - id: meetups
+    match: { from_domain: [email.meetup.com] }
+    actions: { add_labels: ["meetups"] }
+  - id: palmsuikerweg
+    match: { from_domain: [bmdaktechniek.nl, meditel.nl, nielsmons.nl, blauweeik.nl, gk-timmerwerken.nl, bouwadviesxxl.nl] }
+    actions: { add_labels: ["palmsuikerweg"] }
+  - id: palmsuikerweg-keuken
+    match: { from_domain: [electrolux.nl] }
+    actions: { add_labels: ["palmsuikerweg/keuken"] }
+  - id: palmsuikerweg-scheiden
+    match: { from_domain: [hypotheekshop.nl, stater.nl] }
+    actions: { add_labels: ["palmsuikerweg/scheiden"] }
+  - id: recruiters
+    match: { from_domain: [codeguild.nl] }
+    actions: { add_labels: ["recruiters"] }
+  - id: spaans
+    match: { from_domain: [bestspanishteacher.com, cervantes.es] }
+    actions: { add_labels: ["spaans"] }
+  - id: spaans-habladoresutrecht
+    match: { from_domain: [taxamo.com, duolingo.com, quaderno.io] }
+    actions: { add_labels: ["spaans/habladoresUtrecht"] }
+  - id: spaans-habladoresutrecht-kaartspel
+    match: { from_domain: [roemspeelkaarten.nl] }
+    actions: { add_labels: ["spaans/habladoresUtrecht/kaartspel"] }
+  - id: vrijwillig
+    match: { from_domain: [nederlandcares.nl] }
+    actions: { add_labels: ["vrijwillig"] }
+  - id: werk-miranda
+    match: { from_domain: [rcdeleeuw.nl] }
+    actions: { add_labels: ["werk/Miranda"] }
 
-  - id: campings
+  # Round 3: top unmatched inbox domains (~45 vendors, ~700 messages).
+  - id: reizen-promo
+    match: { from_domain: [email.voyageprive.be, e.vliegtickets.nl, laterooms.com, sender.skyscanner.com, mc.ihg.com, reply.checkyeti.com, info-flyingblue.com] }
+    actions: { add_labels: ["Reizen"] }
+  # klm.com is mixed (work travel, private flights, Flying Blue promos) - only
+  # travel-document mail is safe to label by domain.
+  # klm.com is the former employer's domain - colleague mail, not travel.
+  # Only travel-document subjects mean Reizen; everything else is Werk/KLM.
+  - id: werk-klm-domain
+    match: { from_domain: [klm.com] }
+    exclude:
+      - has_label: [CATEGORY_PROMOTIONS]
+        subject_not_contains: *transactional_subject
+      - subject_contains: [boardingpas, boarding pass, vlucht, flight, booking, reservering]
+    actions: { add_labels: ["Werk/KLM"] }
+  - id: reizen-klm-travel
     match:
-      subject_contains: [camping, campsite]
-    actions:
-      add_labels: [Reizen]
-      archive: true
+      from_domain: [klm.com]
+      subject_contains: [boardingpas, "boarding pass", vlucht, flight, booking, reservering]
+    exclude: *promo_screen
+    actions: { add_labels: ["Reizen"] }
+  - id: reizen-hertz
+    match: { from_domain: [hertz.com] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Reizen"] }
+  - id: daily-films
+    match: { from_domain: [members.netflix.com, mail.pathe-thuis.nl] }
+    actions: { add_labels: ["Daily/Films"] }
+  - id: daily-information-nieuws
+    match: { from_domain: [messagent.fdmediagroep.nl, mail.fortune.com] }
+    actions: { add_labels: ["Daily/Information"] }
+  - id: kennis-training-coaching
+    match: { from_domain: [avagasso.com, gortcoaching.nl, bridgeman.nl, codelab-nl.nl, m.learn.coursera.org] }
+    actions: { add_labels: ["Kennis/Training"] }
+  # JetBrains sends both licence invoices and a newsletter - subject decides.
+  - id: kennis-tutorials-dev
+    match: { from_domain: [jetbrains.com, codemotion.it, ifttt.com, androidweekly.net, leaddev.com] }
+    exclude: { subject_contains: [invoice, factuur, subscription, renewal, "order confirmation"] }
+    actions: { add_labels: ["Kennis/Tutorials"] }
+  - id: administratie-aankopen-software-jetbrains
+    match:
+      from_domain: [jetbrains.com]
+      subject_contains: [invoice, factuur, subscription, renewal, "order confirmation"]
+    actions: { add_labels: ["Administratie/Aankopen/Software"] }
+  # Boekenbalie both publishes a newsletter and runs a webshop.
+  - id: kennis-boeken-boekenbalie
+    match: { from_domain: [boekenbalie.nl] }
+    exclude: { subject_contains: *transactional_subject }
+    actions: { add_labels: ["Kennis/Boeken"] }
+  - id: administratie-aankopen-boekenbalie
+    match:
+      from_domain: [boekenbalie.nl]
+      subject_contains: *transactional_subject
+    actions: { add_labels: ["Administratie/Aankopen"] }
+  - id: administratie-korting-round3
+    match: { from_domain: [mailing.airmiles.nl, cashbackxl.nl, tacomundo.com, email.lecol.cc] }
+    actions: { add_labels: ["Administratie/Korting"] }
+  - id: albertheijn-nieuwsbrief
+    match: { from_domain: [nieuwsbrief.ah.nl] }
+    actions: { add_labels: ["AlbertHeijn"] }
+  - id: administratie-loonstrook-ah-periode
+    match: { subject_contains: ["je salaris van periode", "salaris van periode"] }
+    actions: { add_labels: ["Administratie/Loonstrook"] }
+  - id: administratie-auto-autoscout
+    match: { from_domain: [notifications.autoscout24.com] }
+    actions: { add_labels: ["Administratie/Auto"] }
+  - id: administratie-marktplaats
+    match: { from_domain: [marktplaats.nl] }
+    actions: { add_labels: ["Administratie"] }
+  - id: administratie-goede-doelen-greenpeace
+    match: { from_domain: [email.greenpeace.nl] }
+    actions: { add_labels: ["Administratie/goede doelen"] }
+  - id: administratie-aankopen-round3
+    match: { from_domain: [service.donaldduck.nl, noreply.coolblue.eu] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen"] }
+  - id: administratie-aankopen-pakketjes-decathlon-erply
+    match: { from_domain: [eu.erply.io] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/pakketjes/decathlon"] }
+  - id: administratie-aankopen-amazon-nl
+    match: { from_domain: [amazon.nl] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/amazon"] }
+  - id: administratie-aankopen-meubels-goossens
+    match: { from_domain: [goossens.nl] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/meubels"] }
+  - id: administratie-aankopen-games-asmodee
+    match: { from_domain: [asmodee.net] }
+    exclude: *promo_screen
+    actions: { add_labels: ["Administratie/Aankopen/games"] }
+  - id: administratie-round3
+    match: { from_domain: [utrecht.nl, mail.vitens.nl, adremutrecht.nl] }
+    actions: { add_labels: ["Administratie"] }
+  - id: administratie-belasting-accountant
+    match: { from_domain: [visser-koehler.nl] }
+    actions: { add_labels: ["Administratie/belasting"] }
+  - id: administratie-zorg-round3
+    match: { from_domain: [mijngezondheid.net] }
+    actions: { add_labels: ["Administratie/zorg"] }
+  - id: administratie-reparaties-velux
+    match: { from_domain: [velux.nl] }
+    actions: { add_labels: ["Administratie/reparaties"] }
+  # rabobank.nl is mixed (banking, mortgage, house sale, outing promos):
+  # mortgage goes by subject, promos are screened out, the rest is banking.
+  - id: administratie-geld-rabobank
+    match: { from_domain: [rabobank.nl, e-mail.rabobank.nl, email.rabobank.nl] }
+    exclude:
+      - has_label: [CATEGORY_PROMOTIONS]
+        subject_not_contains: *transactional_subject
+      - subject_contains: [hypotheek, "uitje", "korting", "persoonlijke code"]
+    actions: { add_labels: ["Administratie/geld"] }
+  - id: hypotheek-round3
+    match: { from_domain: [rabobank.nl, email.rabobank.nl, hypotheekvisie.nl], subject_contains: [hypotheek] }
+    actions: { add_labels: ["hypotheek"] }
+  # NWWI validates mortgage appraisals; historically filed under the property.
+  - id: albrecht-thaerlaan-verkoop
+    match: { from_domain: [move.nl, teamadvocaten.nl, nwwi.nl] }
+    actions: { add_labels: ["Albrecht Thaerlaan 57"] }
+  - id: persoonlijk-psycholoog-mindspring
+    match: { from_domain: [mindspring.nl] }
+    actions: { add_labels: ["Persoonlijk/psycholoog"] }
+  - id: administratie-jamie-fanwork
+    match: { from_domain: [fanworkmusicals.nl] }
+    actions: { add_labels: ["Administratie/jamie"] }
+  # xs4all.nl is one person's ISP address, not a vendor: the historic
+  # palmsuikerweg/scheiden majority reflects an old topic, not the sender.
+  - id: persoonlijk-xs4all
+    match: { from_domain: [xs4all.nl] }
+    actions: { add_labels: ["Persoonlijk"] }
+  - id: werk-recruitment-round3
+    match: { from_domain: [elevationpartners.nl] }
+    actions: { add_labels: ["Werk/recruitment"] }
+  - id: meetups-round3
+    match: { from_domain: [reshift.nl] }
+    actions: { add_labels: ["meetups"] }
+  - id: beleggen-finst
+    match: { from_domain: [finst.com] }
+    actions: { add_labels: ["Beleggen"] }
+  - id: beleggen-spanje-azull
+    match: { from_domain: [azull.info] }
+    actions: { add_labels: ["Beleggen/Spanje-vakantie-woning"] }
+  - id: to-be-removed-google-bijdragen
+    match: { from_domain: [google.com], subject_contains: [bijdragen, weergaven, contributions] }
+    actions: { add_labels: ["to-be-removed"], archive: true }
+  - id: to-be-removed-lumosity
+    match: { from_domain: [notifications.lumosity.com] }
+    actions: { add_labels: ["to-be-removed"], archive: true }
 
-  - id: password-reset
-    match:
-      subject_regex: ["(?i)password reset"]
-      older_than_days: 3
-    actions:
-      add_labels: [to-be-removed]
-      archive: true
-      mark_read: true
+  # Gmail already separates promotional mail; trust that signal for the bulk
+  # sweep, but never sweep a message whose subject reads as a real transaction.
+  - id: promo-category-archive
+    match: { has_label: [CATEGORY_PROMOTIONS] }
+    exclude:
+      - subject_contains: *transactional_subject
+        subject_not_contains: *promo_wording
+      # Gmail sometimes files a genuine appointment or callback as promotional;
+      # never sweep those out of the inbox.
+      - subject_contains: [afspraak, terugbelverzoek, "oriënterend gesprek", aanvraag,
+          ondertekenen, wwft, identificatie, aanslag, aangifte, incasso, machtiging,
+          koopovereenkomst, notaris, taxatie, aanmaning, naheffing, opzegging]
+      # Travel operations and account security are never worth a false archive,
+      # even when Gmail files them as promotional. Price alerts say "vluchten
+      # naar", so they are not caught by the possessive forms below.
+      - subject_contains: ["your flight", "upcoming flight", "je vlucht", "uw vlucht",
+          "flight to", check-in, boarding, geannuleerd, cancelled, vertraging, omgeboekt,
+          rebook, gate change]
+      - subject_contains: [wachtwoord, password, verificatiecode, "verification code",
+          "verify your", inloggen, "security alert", "beveiligingswaarschuwing", 2fa,
+          "ongebruikelijke aanmelding", "new sign-in"]
+    actions: { add_labels: ["to-be-removed"], archive: true }
 
-  - id: android-weekly
+  # Promo/commercial bulk: archived and flagged for manual deletion in Gmail.
+  # MailBrain never deletes - the to-be-removed label is the hand-off.
+  - id: promo-archive
     match:
-      subject_contains: [Android Weekly]
-    actions:
-      add_labels: [to-be-removed]
-      archive: true
+      from_domain: [email.voyageprive.be, e.vliegtickets.nl, laterooms.com, sender.skyscanner.com, mc.ihg.com, reply.checkyeti.com, info-flyingblue.com, members.netflix.com, mail.pathe-thuis.nl, mailing.airmiles.nl, cashbackxl.nl, tacomundo.com, email.lecol.cc, nieuwsbrief.ah.nl, notifications.autoscout24.com, marktplaats.nl, email.greenpeace.nl, service.donaldduck.nl, asmodee.net]
+    exclude:
+      subject_contains: *transactional_subject
+      subject_not_contains: *promo_wording
+    actions: { add_labels: ["to-be-removed"], archive: true }
 
-  - id: bnnvara-newsletter
+  # Content newsletters: archived only where the weekly Notion TLDR covers them
+  # (TLDR history starts 11 June 2026; older editions get to-review instead).
+  # Editorial senders: their headlines quote words like "pakket" and "retour",
+  # so a transactional screen here would strand news in the inbox.
+  - id: nieuwsbrief-archive-tldr-covered
     match:
-      from_domain: [bnnvara.nl]
-    actions:
-      add_labels: [to-be-removed]
-      archive: true
-
-  - id: follow-this
+      from_domain: [messagent.fdmediagroep.nl, mail.fortune.com, m.learn.coursera.org, codemotion.it, ifttt.com, avagasso.com, gortcoaching.nl, bridgeman.nl, azull.info, androidweekly.net, leaddev.com, email.trainingpeaks.com]
+    exclude: { older_than_days: 88 }
+    actions: { archive: true }
+  # These two also sell: screen their order and invoice mail out of the sweep.
+  - id: nieuwsbrief-archive-webshop-senders
     match:
-      subject_contains: [Follow This]
-    actions:
-      add_labels: [to-be-removed]
-      archive: true
-
-  - id: social-schools
+      from_domain: [boekenbalie.nl, jetbrains.com]
+    exclude:
+      - older_than_days: 88
+      - subject_contains: *transactional_subject
+    actions: { archive: true }
+  - id: nieuwsbrief-to-review-pre-tldr
     match:
-      from_domain: [socialschools.nl]
-    actions:
-      add_labels: [to-be-removed]
-      archive: true
-
-  - id: library-newsletter
-    match:
-      subject_contains: [bibliotheek, library]
-    actions:
-      add_labels: [to-be-removed]
-      archive: true
-
-  - id: jcrete
-    match:
-      subject_contains: [JCrete, Heinz Kabutz]
-    actions:
-      add_labels: [JCrete]
-
-  - id: bux-reports
-    match:
-      from_domain: [getbux.com]
-    actions:
-      add_labels: [Beleggen]
-      archive: true
-
-  - id: degiro
-    match:
-      from_domain: [degiro.nl]
-    actions:
-      add_labels: [Beleggen/deGiro]
-      archive: true
-
-  - id: home-utilities
-    match:
-      subject_contains: [energie, internet, factuur]
-    actions:
-      add_labels: [Albrecht Thaerlaan 57]
-
-  - id: orders-invoices
-    match:
-      subject_contains: [order, invoice, factuur, bestelling]
-    actions:
-      add_labels: [Administratie/Aankopen]
+      from_domain: [messagent.fdmediagroep.nl, mail.fortune.com, m.learn.coursera.org, jetbrains.com, codemotion.it, ifttt.com, boekenbalie.nl, avagasso.com, gortcoaching.nl, bridgeman.nl, azull.info, androidweekly.net, leaddev.com, email.trainingpeaks.com]
+      older_than_days: 88
+    exclude: { subject_contains: *transactional_subject }
+    actions: { add_labels: ["to-review"] }

@@ -25,7 +25,7 @@ uv run mailbrain init      # creates ~/.mailbrain/ and state.db
 mailbrain init                         # create ~/.mailbrain/ and the SQLite db
 mailbrain scan  [--query "in:inbox"]   # fetch Gmail metadata into the local cache
 mailbrain classify [--rules config/rules.yaml]  # dry-run: print what WOULD change
-mailbrain apply    [--rules config/rules.yaml] [--execute]  # apply the plan (dry-run unless --execute)
+mailbrain apply    [--rules config/rules.yaml] [--dry-run] [--yes]  # apply the plan to Gmail
 mailbrain rollback <run-id>            # reverse every change made by a previous run
 ```
 
@@ -33,14 +33,14 @@ mailbrain rollback <run-id>            # reverse every change made by a previous
   read-only fetch — it never modifies mail.
 - `classify` runs fully offline on the cached data and only prints a plan;
   nothing is applied.
-- `apply` is **dry-run by default**: with no flag it prints the same plan as
-  `classify` and touches nothing. Only `apply --execute` mutates Gmail — adding
-  labels, removing `INBOX` (archive) and `UNREAD` (mark-read). Every mutation is
-  recorded under a run in the local db.
+- `apply` **writes to Gmail** — it prints the plan, then asks for confirmation
+  before mutating (adding labels, removing `INBOX` to archive and `UNREAD` to
+  mark-read). Use `--dry-run` to print the plan and stop, or `--yes`/`-y` to
+  skip the prompt (for scripts). Every mutation is recorded under a run in the
+  local db.
 - `rollback <run-id>` replays a run's recorded mutations in reverse, restoring
-  the pre-run label state. Both `apply --execute` and `rollback` need
-  `credentials.json`. **Nothing is ever deleted** — removing a message stays a
-  manual Gmail action.
+  the pre-run label state. Both `apply` and `rollback` need `credentials.json`.
+  **Nothing is ever deleted** — removing a message stays a manual Gmail action.
 
 ## Gmail API credentials (manual, one-time)
 

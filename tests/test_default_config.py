@@ -16,9 +16,9 @@ def test_default_settings_load():
 
 def test_default_rules_load_and_are_nonempty():
     rf = config.load_rules(CONFIG_DIR / "rules.yaml")
-    ids = {r.id for r in rf.rules}
-    assert "booking-payment" in ids
-    assert "password-reset" in ids
+    assert rf.rules, "expected at least one rule"
+    ids = [r.id for r in rf.rules]
+    assert len(ids) == len(set(ids)), "rule ids must be unique"
     for r in rf.rules:
         assert r.actions.add_labels or r.actions.archive or r.actions.mark_read
 

@@ -38,7 +38,9 @@ class RuleMatch(BaseModel):
 
     from_domain: list[str] = Field(default_factory=list)
     subject_contains: list[str] = Field(default_factory=list)
+    subject_not_contains: list[str] = Field(default_factory=list)
     subject_regex: list[str] = Field(default_factory=list)
+    has_label: list[str] = Field(default_factory=list)
     older_than_days: int | None = None
 
     @field_validator("subject_regex")
@@ -63,7 +65,16 @@ class RuleActions(BaseModel):
 class Rule(BaseModel):
     id: str
     match: RuleMatch
+    exclude: RuleMatch | list[RuleMatch] | None = None
     actions: RuleActions
+
+    @property
+    def exclude_sets(self) -> list[RuleMatch]:
+        if self.exclude is None:
+            return []
+        if isinstance(self.exclude, RuleMatch):
+            return [self.exclude]
+        return self.exclude
 
 
 class RulesFile(BaseModel):

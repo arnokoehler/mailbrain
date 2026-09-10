@@ -4,9 +4,11 @@ from unittest.mock import MagicMock
 from sqlalchemy import select
 
 from mailbrain.apply import execute_plan
-from mailbrain.planner import PlannedMutation
+from mailbrain.planner import PlannedMutation, plan_mutations
+from mailbrain.rules.models import Classification
+from mailbrain.scan import load_cached
 from mailbrain.storage import db
-from mailbrain.storage.models import Label, Mutation, Run
+from mailbrain.storage.models import Label, Message, Mutation, Run
 
 
 def _factory(tmp_path):
@@ -70,6 +72,37 @@ def test_execute_plan_empty_plans_no_calls(tmp_path):
     client.batch_modify.assert_not_called()
     with factory() as s:
         assert s.get(Run, run_id) is not None
+
+
+def test_execute_plan_updates_message_cache_so_reruns_are_noops(tmp_path):
+    dbp = tmp_path / "state.db"
+    db.init_db(dbp)
+    factory = db.session_factory(dbp)
+    with factory() as s:
+        s.add(Label(gmail_id="INBOX", name="INBOX"))
+        s.add(Label(gmail_id="L_reizen", name="Reizen"))
+        s.add(Message(gmail_id="m1", sender="a@booking.com", subject="x",
+                      label_ids=json.dumps(["INBOX"])))
+        s.commit()
+
+    client = MagicMock()
+    plans = [PlannedMutation(gmail_id="m1", add_labels=("Reizen",), archive=True, mark_read=False)]
+    execute_plan(client, factory, plans, {"m1": {"INBOX"}})
+
+    # cache now reflects the applied state: Reizen added, INBOX removed
+    _messages, current = load_cached(factory)
+    assert current["m1"] == {"Reizen"}
+
+    # re-planning the same classification is now a no-op
+    again = plan_mutations(
+        [
+            Classification(
+                gmail_id="m1", matched_rule_ids=("r",), add_labels=("Reizen",), archive=True
+            )
+        ],
+        current,
+    )
+    assert again == []
 
 
 def test_execute_plan_archive_does_not_create_system_label(tmp_path):

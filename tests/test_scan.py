@@ -107,6 +107,58 @@ def test_rescan_updates_changed_fields(tmp_path):
         assert len(s.scalars(select(Message)).all()) == 2
 
 
+def _meta(gmail_id, subject="s", sender="a@b.com", labels=("INBOX",)):
+    return {
+        "gmail_id": gmail_id,
+        "thread_id": "t",
+        "snippet": "x",
+        "sender": sender,
+        "subject": subject,
+        "label_ids": list(labels),
+        "internal_date_ms": 1751328000000,
+    }
+
+
+def test_scan_skips_a_message_that_fails_to_fetch(tmp_path):
+    # One message raising (e.g. Gmail 400 failedPrecondition) must not abort
+    # the whole scan; the good messages are still cached.
+    dbp = tmp_path / "state.db"
+    db.init_db(dbp)
+    factory = db.session_factory(dbp)
+
+    client = MagicMock()
+    client.list_message_ids.return_value = ["m1", "bad", "m3"]
+    client.list_labels.return_value = {"INBOX": "INBOX"}
+    client.get_metadata.side_effect = [_meta("m1"), RuntimeError("boom"), _meta("m3")]
+
+    count = scan_mailbox(client, "in:inbox", factory)
+
+    assert count == 2  # m1 + m3 cached, bad skipped
+    with factory() as s:
+        assert s.scalar(select(Message).where(Message.gmail_id == "m1")) is not None
+        assert s.scalar(select(Message).where(Message.gmail_id == "m3")) is not None
+        assert s.scalar(select(Message).where(Message.gmail_id == "bad")) is None
+
+
+def test_scan_resume_skips_already_cached_ids(tmp_path):
+    dbp = tmp_path / "state.db"
+    db.init_db(dbp)
+    factory = db.session_factory(dbp)
+    scan_mailbox(_fake_client(), "in:inbox", factory)  # caches m1, m2
+
+    client = MagicMock()
+    client.list_message_ids.return_value = ["m1", "m2", "m3"]
+    client.list_labels.return_value = {"INBOX": "INBOX"}
+    client.get_metadata.side_effect = [_meta("m3")]  # only m3 may be fetched
+
+    count = scan_mailbox(client, "in:inbox", factory, skip_cached=True)
+
+    assert count == 1  # only m3 newly fetched
+    assert client.get_metadata.call_count == 1
+    with factory() as s:
+        assert len(s.scalars(select(Message)).all()) == 3
+
+
 def test_load_cached_unknown_label_id_falls_back_to_raw_id(tmp_path):
     import json
 

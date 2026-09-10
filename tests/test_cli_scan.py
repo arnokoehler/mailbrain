@@ -21,9 +21,10 @@ def test_scan_wires_auth_client_and_scanner(monkeypatch, tmp_path):
 
     captured: dict[str, object] = {}
 
-    def fake_scan(client, query, factory):
+    def fake_scan(client, query, factory, skip_cached=False):
         captured["query"] = query
         captured["client"] = client
+        captured["skip_cached"] = skip_cached
         return 7
 
     monkeypatch.setattr(cli, "scan_mailbox", fake_scan)
