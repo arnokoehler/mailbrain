@@ -7,12 +7,13 @@ from mailbrain.rules.models import MessageMeta
 NOW = datetime(2026, 7, 12, tzinfo=UTC)
 
 
-def _msg(sender="x@booking.com", subject="hello", days_old=0):
+def _msg(sender="x@booking.com", subject="hello", days_old=0, labels=()):
     return MessageMeta(
         gmail_id="m1",
         sender=sender,
         subject=subject,
         internal_date=NOW - timedelta(days=days_old),
+        current_labels=tuple(labels),
     )
 
 
@@ -108,4 +109,104 @@ def test_exclude_does_not_veto_when_its_criteria_absent():
 
 def test_empty_exclude_never_vetoes():
     rule = _rule_with_exclude(RuleMatch(subject_contains=["factuur"]), RuleMatch())
+    assert rule_matches(rule, _msg(subject="uw factuur"), NOW)
+
+
+def test_has_label_matches_when_message_carries_the_label():
+    rule = _rule(from_domain=["booking.com"], has_label=["CATEGORY_PROMOTIONS"])
+    assert rule_matches(rule, _msg(labels=["INBOX", "CATEGORY_PROMOTIONS"]), NOW)
+
+
+def test_has_label_does_not_match_when_label_absent():
+    rule = _rule(from_domain=["booking.com"], has_label=["CATEGORY_PROMOTIONS"])
+    assert not rule_matches(rule, _msg(labels=["INBOX"]), NOW)
+
+
+def test_has_label_is_a_criterion_on_its_own():
+    assert rule_matches(
+        _rule(has_label=["CATEGORY_PROMOTIONS"]), _msg(labels=["CATEGORY_PROMOTIONS"]), NOW
+    )
+
+
+def test_exclude_on_has_label_vetoes_promotional_mail():
+    rule = _rule_with_exclude(
+        RuleMatch(from_domain=["coolblue.eu"]),
+        RuleMatch(has_label=["CATEGORY_PROMOTIONS"]),
+    )
+    assert not rule_matches(
+        rule,
+        _msg(sender="info@noreply.coolblue.eu", labels=["INBOX", "CATEGORY_PROMOTIONS"]),
+        NOW,
+    )
+    assert rule_matches(
+        rule,
+        _msg(sender="info@noreply.coolblue.eu", subject="Je bestelling", labels=["INBOX"]),
+        NOW,
+    )
+
+
+def test_subject_not_contains_blocks_a_match():
+    rule = _rule(from_domain=["booking.com"], subject_not_contains=["invoice"])
+    assert not rule_matches(rule, _msg(subject="Your invoice"), NOW)
+
+
+def test_subject_not_contains_allows_other_subjects():
+    rule = _rule(from_domain=["booking.com"], subject_not_contains=["invoice"])
+    assert rule_matches(rule, _msg(subject="Your booking"), NOW)
+
+
+def test_subject_not_contains_is_case_insensitive():
+    rule = _rule(from_domain=["booking.com"], subject_not_contains=["INVOICE"])
+    assert not rule_matches(rule, _msg(subject="your invoice is ready"), NOW)
+
+
+def test_subject_not_contains_alone_is_not_a_criterion():
+    assert not rule_matches(_rule(subject_not_contains=["invoice"]), _msg(subject="hello"), NOW)
+
+
+def _rule_with_excludes(match: RuleMatch, excludes: list[RuleMatch]) -> Rule:
+    return Rule(id="r", match=match, exclude=excludes, actions=RuleActions(add_labels=["L"]))
+
+
+def test_promotional_veto_spares_a_transactional_subject():
+    """A vendor rule must skip ads but still label a real order Gmail misfiled."""
+    rule = _rule_with_excludes(
+        RuleMatch(from_domain=["coolblue.eu"]),
+        [RuleMatch(has_label=["CATEGORY_PROMOTIONS"], subject_not_contains=["bestelling"])],
+    )
+    advert = _msg(
+        sender="a@coolblue.eu", subject="Back to School-deals", labels=["CATEGORY_PROMOTIONS"]
+    )
+    misfiled_order = _msg(
+        sender="a@coolblue.eu", subject="Je bestelling is verzonden", labels=["CATEGORY_PROMOTIONS"]
+    )
+    assert not rule_matches(rule, advert, NOW)
+    assert rule_matches(rule, misfiled_order, NOW)
+
+
+def test_exclude_list_vetoes_when_any_criteria_set_holds():
+    rule = _rule_with_excludes(
+        RuleMatch(from_domain=["coolblue.eu"]),
+        [
+            RuleMatch(has_label=["CATEGORY_PROMOTIONS"]),
+            RuleMatch(subject_contains=["deals"]),
+        ],
+    )
+    promo_by_category = _msg(
+        sender="a@coolblue.eu", subject="Je bestelling", labels=["CATEGORY_PROMOTIONS"]
+    )
+    promo_by_subject = _msg(
+        sender="a@coolblue.eu", subject="Back to School-deals", labels=["INBOX"]
+    )
+    real_order = _msg(
+        sender="a@coolblue.eu", subject="Je bestelling is verzonden", labels=["INBOX"]
+    )
+
+    assert not rule_matches(rule, promo_by_category, NOW)
+    assert not rule_matches(rule, promo_by_subject, NOW)
+    assert rule_matches(rule, real_order, NOW)
+
+
+def test_exclude_list_with_only_empty_criteria_never_vetoes():
+    rule = _rule_with_excludes(RuleMatch(subject_contains=["factuur"]), [RuleMatch()])
     assert rule_matches(rule, _msg(subject="uw factuur"), NOW)

@@ -95,7 +95,11 @@ def test_execute_plan_updates_message_cache_so_reruns_are_noops(tmp_path):
 
     # re-planning the same classification is now a no-op
     again = plan_mutations(
-        [Classification(gmail_id="m1", matched_rule_ids=("r",), add_labels=("Reizen",), archive=True)],
+        [
+            Classification(
+                gmail_id="m1", matched_rule_ids=("r",), add_labels=("Reizen",), archive=True
+            )
+        ],
         current,
     )
     assert again == []

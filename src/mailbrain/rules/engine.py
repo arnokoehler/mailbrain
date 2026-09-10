@@ -27,6 +27,7 @@ def _has_any_criterion(m: RuleMatch) -> bool:
         m.from_domain
         or m.subject_contains
         or m.subject_regex
+        or m.has_label
         or m.older_than_days is not None
     )
 
@@ -50,7 +51,15 @@ def _criteria_match(m: RuleMatch, msg: MessageMeta, now: datetime) -> bool:
         if not any(s.lower() in subject_lower for s in m.subject_contains):
             return False
 
+    if m.subject_not_contains:
+        subject_lower = msg.subject.lower()
+        if any(s.lower() in subject_lower for s in m.subject_not_contains):
+            return False
+
     if m.subject_regex and not any(re.search(pat, msg.subject) for pat in m.subject_regex):
+        return False
+
+    if m.has_label and not set(m.has_label) & set(msg.current_labels):
         return False
 
     if m.older_than_days is not None:
@@ -62,18 +71,22 @@ def _criteria_match(m: RuleMatch, msg: MessageMeta, now: datetime) -> bool:
 
 
 def rule_matches(rule: Rule, msg: MessageMeta, now: datetime) -> bool:
-    """True if the message satisfies the rule's ``match`` and not its ``exclude``.
+    """True if the message satisfies the rule's ``match`` and no ``exclude`` set.
 
     ``exclude`` vetoes an otherwise-matching rule: if its criteria are satisfied,
-    the rule does not match. An absent or empty ``exclude`` never vetoes.
+    the rule does not match. It accepts either one criteria set or a list of
+    them, in which case any satisfied set vetoes (OR of NOTs) — that is how a
+    vendor rule screens out both `has_label: [CATEGORY_PROMOTIONS]` and
+    promotional subjects. An absent or empty ``exclude`` never vetoes.
 
     Note: subject_contains is case-insensitive; subject_regex is matched with
     re.search and honours the pattern's own flags (use ``(?i)`` for
-    case-insensitive regex). Domain matching is case-insensitive.
+    case-insensitive regex). Domain and has_label matching are exact-set and
+    case-insensitive respectively per criterion.
     """
     if not _criteria_match(rule.match, msg, now):
         return False
-    return not (rule.exclude is not None and _criteria_match(rule.exclude, msg, now))
+    return not any(_criteria_match(ex, msg, now) for ex in rule.exclude_sets)
 
 
 def classify(
