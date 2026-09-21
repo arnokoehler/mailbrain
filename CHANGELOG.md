@@ -6,6 +6,36 @@ All notable changes to MailBrain are documented here. Format follows
 
 ## [Unreleased]
 
+### Added (safe execution)
+- Explicit settings-backed scan query, Gmail page/batch sizes, mutation limits,
+  archive limits, scan freshness, and protected-message safety checks.
+- Process locking for migrations, scans, cache-based planning, apply, rollback,
+  and run recovery; lock contention exits with status 2.
+- Versioned database initialization and `mailbrain db upgrade` with safe legacy
+  schema validation and backup.
+- Explicit scan lifecycle and membership. Classification and dry-run report the
+  latest scan's ID, query, age, status, and safety blockers.
+- Durable apply and rollback intent, checkpointed batches, deterministic rules
+  and safety hashes, live drift checks, and actual execution status reporting.
+- `mailbrain runs`, `runs inspect`, read-only `runs reconcile`, and confirmed
+  `runs abandon` recovery commands.
+
+### Changed (safe execution)
+- Gmail writes now require `apply --scan-id ID`; `--yes` bypasses confirmation
+  only. Safety, freshness, locking, and live revalidation always remain active.
+- Rollback now supports `--dry-run` and `--yes`, checks live affected labels,
+  enforces volume limits, and uses a fresh live INBOX population for inverse
+  archive budgets.
+- Repair scripts retain read-only analysis but reject `--apply`; safe repair is
+  routed through the audited rollback executor.
+- `scan --resume` now performs a full fresh scan rather than skipping cached IDs.
+
+### Fixed (safe execution)
+- Audit `read_before` and `read_after` retain the historical meaning: the value
+  records membership in Gmail's `UNREAD` label.
+- Apply reports persisted confirmed/failed/uncertain/conflict counts rather than
+  claiming every planned mutation succeeded.
+
 ### Added
 - `has_label` match criterion: rules can screen on labels the message already
   carries, so Gmail's own `CATEGORY_PROMOTIONS` becomes a second axis next to

@@ -1,7 +1,11 @@
+from contextlib import contextmanager
+
 from sqlalchemy import inspect
 from typer.testing import CliRunner
 
+import mailbrain.cli as cli
 from mailbrain.cli import app
+from mailbrain.locking import LockUnavailableError
 from mailbrain.storage import db
 
 runner = CliRunner()
@@ -27,3 +31,22 @@ def test_init_is_idempotent(monkeypatch, tmp_path):
     monkeypatch.setenv("MAILBRAIN_HOME", str(tmp_path / "mb"))
     assert runner.invoke(app, ["init"]).exit_code == 0
     assert runner.invoke(app, ["init"]).exit_code == 0
+
+
+def test_db_upgrade_command_uses_lock(monkeypatch, tmp_path):
+    home = tmp_path / "mb"
+    monkeypatch.setenv("MAILBRAIN_HOME", str(home))
+    assert runner.invoke(app, ["db", "upgrade"]).exit_code == 0
+    assert (home / "state.db").exists()
+
+
+def test_lock_unavailable_is_clear_exit_code_two(monkeypatch):
+    @contextmanager
+    def unavailable():
+        raise LockUnavailableError("MailBrain state is locked")
+        yield
+
+    monkeypatch.setattr(cli, "process_lock", unavailable)
+    result = runner.invoke(app, ["init"])
+    assert result.exit_code == 2
+    assert "state is locked" in result.output

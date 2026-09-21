@@ -33,6 +33,10 @@ def cache_dir() -> Path:
     return app_dir() / "cache"
 
 
+def lock_path() -> Path:
+    return app_dir() / "mailbrain.lock"
+
+
 def ensure_app_dir() -> Path:
     root = app_dir()
     root.mkdir(parents=True, exist_ok=True)

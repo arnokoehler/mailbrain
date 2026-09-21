@@ -5,7 +5,7 @@ from typer.testing import CliRunner
 
 from mailbrain.cli import app
 from mailbrain.storage import db
-from mailbrain.storage.models import Label, Message
+from mailbrain.storage.models import Label, Message, ScanRun
 
 runner = CliRunner()
 
@@ -24,6 +24,16 @@ def _seed(dbp):
     db.init_db(dbp)
     factory = db.session_factory(dbp)
     with factory() as s:
+        scan = ScanRun(
+            query="in:inbox",
+            started_at=datetime.now(UTC),
+            finished_at=datetime.now(UTC),
+            status="succeeded",
+            listed_count=1,
+            fetched_count=1,
+        )
+        s.add(scan)
+        s.flush()
         s.add(Label(gmail_id="INBOX", name="INBOX"))
         s.add(
             Message(
@@ -33,6 +43,7 @@ def _seed(dbp):
                 snippet="x",
                 label_ids=json.dumps(["INBOX"]),
                 internal_date=datetime(2026, 7, 1, tzinfo=UTC),
+                last_scan_id=scan.id,
             )
         )
         s.commit()
@@ -75,6 +86,17 @@ def test_classify_empty_db_is_clean(monkeypatch, tmp_path):
     monkeypatch.setenv("MAILBRAIN_HOME", str(home))
     home.mkdir(parents=True)
     db.init_db(home / "state.db")
+    factory = db.session_factory(home / "state.db")
+    with factory() as session:
+        session.add(
+            ScanRun(
+                query="in:inbox",
+                started_at=datetime.now(UTC),
+                finished_at=datetime.now(UTC),
+                status="succeeded",
+            )
+        )
+        session.commit()
     rules = _write_rules(tmp_path)
 
     result = runner.invoke(app, ["classify", "--rules", str(rules)])

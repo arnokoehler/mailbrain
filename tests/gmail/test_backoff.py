@@ -1,6 +1,17 @@
 import pytest
+from httplib2 import HttpLib2Error
 
 from mailbrain.gmail import backoff
+
+
+class HttpFailure(Exception):
+    def __init__(self, status, reason=None):
+        self.resp = type("Resp", (), {"status": status})()
+        self.content = (
+            f'{{"error":{{"errors":[{{"reason":"{reason}"}}]}}}}'.encode()
+            if reason
+            else b"{}"
+        )
 
 
 def test_returns_value_without_retry():
@@ -60,3 +71,24 @@ def test_gives_up_after_max_attempts():
             is_retryable=lambda exc: True,
         )
     assert attempts["n"] == 4
+
+
+@pytest.mark.parametrize("status", [429, 500, 502, 503, 504])
+def test_read_retry_classifier_accepts_transient_http_statuses(status):
+    assert backoff.is_retryable_read(HttpFailure(status)) is True
+
+
+@pytest.mark.parametrize("reason", ["rateLimitExceeded", "userRateLimitExceeded"])
+def test_read_retry_classifier_accepts_only_rate_limit_403(reason):
+    assert backoff.is_retryable_read(HttpFailure(403, reason)) is True
+
+
+def test_read_retry_classifier_rejects_permanent_auth_403():
+    assert backoff.is_retryable_read(HttpFailure(403, "forbidden")) is False
+
+
+@pytest.mark.parametrize(
+    "error", [TimeoutError(), ConnectionError(), OSError(), HttpLib2Error()]
+)
+def test_read_retry_classifier_accepts_transport_errors(error):
+    assert backoff.is_retryable_read(error) is True

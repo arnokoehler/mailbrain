@@ -9,6 +9,9 @@ from rich.table import Table
 
 from mailbrain.planner import PlannedMutation
 from mailbrain.rules.models import MessageMeta
+from mailbrain.runs import RunState
+from mailbrain.safety import PlanValidation
+from mailbrain.storage.models import ScanRun
 
 
 @dataclass(frozen=True)
@@ -67,3 +70,44 @@ def render_metrics(metrics: Metrics, console: Console | None = None) -> None:
         f"[bold]archived[/] {metrics.archived}  "
         f"[bold]read[/] {metrics.marked_read}"
     )
+
+
+def render_scan(scan: ScanRun, age_minutes: float, console: Console | None = None) -> None:
+    console = console or Console()
+    console.print(
+        f"[bold]scan[/] {scan.id}  [bold]query[/] {scan.query!r}  "
+        f"[bold]age[/] {age_minutes:.1f}m  [bold]status[/] {scan.status}"
+    )
+
+
+def render_safety(validation: PlanValidation, console: Console | None = None) -> None:
+    console = console or Console()
+    for limit in validation.missing_limits:
+        console.print(f"[yellow]safety blocker[/] missing limit: {limit}")
+    for reason in validation.reasons:
+        details = reason.detail
+        if reason.message_ids:
+            details += f"; messages={','.join(reason.message_ids)}"
+        if reason.rule_ids:
+            details += f"; rules={','.join(reason.rule_ids)}"
+        console.print(f"[red]safety blocker[/] {reason.code}: {details}")
+
+
+def render_run(state: RunState, console: Console | None = None) -> None:
+    console = console or Console()
+    console.print(
+        f"run {state.id} type={state.run_type} status={state.status} "
+        f"intended={state.intended_count} confirmed={state.applied_count} "
+        f"failed={state.failed_count} uncertain={state.uncertain_count} "
+        f"conflict={state.conflict_count}"
+    )
+    for mutation in state.mutations:
+        console.print(
+            f"  mutation {mutation.id} message={mutation.message_gmail_id} "
+            f"status={mutation.status} batch={mutation.batch_id or '-'}"
+        )
+    for intent in state.label_intents:
+        console.print(
+            f"  label-intent {intent.id} label={intent.label_name} "
+            f"status={intent.status} gmail-id={intent.gmail_label_id or '-'}"
+        )

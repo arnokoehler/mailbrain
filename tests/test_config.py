@@ -1,3 +1,6 @@
+import pytest
+from pydantic import ValidationError
+
 from mailbrain import config
 
 
@@ -11,6 +14,7 @@ def test_settings_defaults_from_empty_yaml(tmp_path):
     assert s.ai.provider == "mistral"
     assert s.ai.confidence_floor == 0.85
     assert s.notion.enabled is False
+    assert s.safety.max_mutations is None
 
 
 def test_settings_override(tmp_path):
@@ -71,3 +75,35 @@ def test_load_settings_missing_file_returns_defaults(tmp_path):
 def test_load_rules_missing_file_returns_empty(tmp_path):
     rf = config.load_rules(tmp_path / "nope.yaml")
     assert rf.rules == []
+
+
+@pytest.mark.parametrize(
+    "setting,value",
+    [
+        ("max_mutations", -1),
+        ("max_archives", -1),
+        ("max_archive_fraction", -0.1),
+        ("max_archive_fraction", 1.1),
+        ("max_scan_age_minutes", 0),
+        ("max_mutations", '"10"'),
+    ],
+)
+def test_safety_limits_are_strictly_validated(tmp_path, setting, value):
+    p = tmp_path / "settings.yaml"
+    p.write_text(f"safety:\n  {setting}: {value}\n")
+    with pytest.raises(ValidationError):
+        config.load_settings(p)
+
+
+def test_safety_rejects_unknown_settings(tmp_path):
+    p = tmp_path / "settings.yaml"
+    p.write_text("safety:\n  max_mutatons: 10\n")
+    with pytest.raises(ValidationError):
+        config.load_settings(p)
+
+
+def test_safety_rejects_invalid_subject_regex(tmp_path):
+    p = tmp_path / "settings.yaml"
+    p.write_text("safety:\n  protected_subject_regex: ['[']\n")
+    with pytest.raises(ValidationError):
+        config.load_settings(p)

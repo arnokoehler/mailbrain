@@ -1,10 +1,14 @@
 """Retry-with-exponential-backoff for transient Gmail API errors."""
 
+import json
 import time
 from collections.abc import Callable
+from typing import Any
 
-# Gmail returns these for rate limiting / transient server issues.
-RETRYABLE_STATUS = {403, 429, 500, 503}
+from google.auth.exceptions import TransportError
+
+RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+RATE_LIMIT_REASONS = {"rateLimitExceeded", "userRateLimitExceeded"}
 
 
 def _status_of(exc: Exception) -> int | None:
@@ -13,8 +17,46 @@ def _status_of(exc: Exception) -> int | None:
     return status if isinstance(status, int) else None
 
 
+def _contains_rate_limit_reason(value: Any) -> bool:
+    if isinstance(value, dict):
+        return any(
+            key == "reason" and item in RATE_LIMIT_REASONS
+            or _contains_rate_limit_reason(item)
+            for key, item in value.items()
+        )
+    if isinstance(value, list):
+        return any(_contains_rate_limit_reason(item) for item in value)
+    return False
+
+
+def _is_rate_limit_403(exc: Exception) -> bool:
+    if _status_of(exc) != 403:
+        return False
+    details = getattr(exc, "error_details", None)
+    if _contains_rate_limit_reason(details):
+        return True
+    content = getattr(exc, "content", None)
+    if isinstance(content, bytes):
+        content = content.decode(errors="replace")
+    if isinstance(content, str):
+        try:
+            return _contains_rate_limit_reason(json.loads(content))
+        except json.JSONDecodeError:
+            return any(reason in content for reason in RATE_LIMIT_REASONS)
+    return False
+
+
 def default_is_retryable(exc: Exception) -> bool:
-    return _status_of(exc) in RETRYABLE_STATUS
+    status = _status_of(exc)
+    return status in RETRYABLE_STATUS or _is_rate_limit_403(exc)
+
+
+def is_retryable_read(exc: Exception) -> bool:
+    return (
+        default_is_retryable(exc)
+        or isinstance(exc, (TimeoutError, ConnectionError, OSError, TransportError))
+        or exc.__class__.__module__.startswith("httplib2")
+    )
 
 
 def with_backoff[T](

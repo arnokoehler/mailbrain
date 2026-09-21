@@ -1,7 +1,7 @@
 # MailBrain
 
 Local-first CLI that classifies Gmail with deterministic rules, applies labels
-and archives in bulk, and (later) publishes weekly Notion digests. Keeps a full
+and archives in bulk. Keeps a full
 audit trail with rollback. **The tool never deletes mail** — deletion stays a
 manual action in Gmail as a safeguard.
 
@@ -16,31 +16,55 @@ See `docs/superpowers/specs/2026-07-11-mailbrain-design.md` for the design.
 
 ```bash
 uv sync
-uv run mailbrain init      # creates ~/.mailbrain/ and state.db
+uv run mailbrain init
 ```
+
+Set explicit safety limits in `config/settings.yaml` before enabling writes.
+Preview commands work with missing limits but report them as blockers.
 
 ## Commands
 
 ```bash
-mailbrain init                         # create ~/.mailbrain/ and the SQLite db
-mailbrain scan  [--query "in:inbox"]   # fetch Gmail metadata into the local cache
-mailbrain classify [--rules config/rules.yaml]  # dry-run: print what WOULD change
-mailbrain apply    [--rules config/rules.yaml] [--dry-run] [--yes]  # apply the plan to Gmail
-mailbrain rollback <run-id>            # reverse every change made by a previous run
+mailbrain init
+mailbrain db upgrade
+mailbrain scan [--settings config/settings.yaml] [--query "in:inbox"]
+mailbrain classify [--settings config/settings.yaml] [--rules config/rules.yaml]
+mailbrain apply --dry-run [--settings config/settings.yaml]
+mailbrain apply --scan-id ID [--settings config/settings.yaml] [--yes]
+mailbrain rollback RUN_ID --dry-run [--settings config/settings.yaml]
+mailbrain rollback RUN_ID [--settings config/settings.yaml] [--yes]
+mailbrain runs
+mailbrain runs inspect RUN_ID
+mailbrain runs reconcile RUN_ID [--settings config/settings.yaml]
+mailbrain runs abandon RUN_ID --reason "operator resolution" --yes
 ```
 
-- `scan` needs `~/.mailbrain/credentials.json` (see below) and does a live,
-  read-only fetch — it never modifies mail.
-- `classify` runs fully offline on the cached data and only prints a plan;
-  nothing is applied.
-- `apply` **writes to Gmail** — it prints the plan, then asks for confirmation
-  before mutating (adding labels, removing `INBOX` to archive and `UNREAD` to
-  mark-read). Use `--dry-run` to print the plan and stop, or `--yes`/`-y` to
-  skip the prompt (for scripts). Every mutation is recorded under a run in the
-  local db.
-- `rollback <run-id>` replays a run's recorded mutations in reverse, restoring
-  the pre-run label state. Both `apply` and `rollback` need `credentials.json`.
-  **Nothing is ever deleted** — removing a message stays a manual Gmail action.
+- `--settings` defaults to `config/settings.yaml`. Its Gmail query, page size,
+  batch size, freshness limit, volume limits, and protected-message criteria
+  are enforced by the CLI.
+- `scan` creates a complete explicit scope. Failed scans are never used, and
+  `--resume` deliberately performs a fresh scan rather than trusting old cache.
+- `classify` and `apply --dry-run` use the latest scan only and show its ID,
+  query, age, status, and all safety blockers. A successful empty scan is valid.
+- Gmail writes require `apply --scan-id ID`, a fresh latest successful scan,
+  complete safety settings, confirmation, and unchanged live Gmail metadata.
+  `--yes` skips only confirmation. Intent is committed before any write.
+- `rollback` previews and confirms the eligible inverse plan. It checks current
+  Gmail state and configured volume limits first. Any inverse archive also uses
+  a freshly listed `in:inbox` population for its fraction budget.
+- `runs reconcile` performs Gmail reads and local recovery updates only. It
+  never mutates Gmail. `runs abandon` is an explicit, audited local closure.
+- All stateful commands use one non-blocking process lock under
+  `MAILBRAIN_HOME`; contention exits with code 2.
+- `scripts/reconcile.py --apply` and `scripts/unlabel.py --apply` are disabled.
+  Their analysis modes remain read-only.
+
+Gmail and SQLite cannot provide an atomic transaction. A timeout after a Gmail
+write remains uncertain and requires `runs reconcile`; it is not retried or
+automatically rollback-eligible. Rollback compares only labels touched by the
+original mutation, so remove-and-readd history that ends in the same state
+cannot be detected. Protected-message heuristics are conservative but cannot
+identify every important message. **Nothing is ever deleted.**
 
 ## Gmail API credentials (manual, one-time)
 

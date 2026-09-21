@@ -4,10 +4,33 @@ gmail:
   batch_size: 1000
 
 ai:
-  enabled: false        # Phase 1 = rules only; Mistral enabled in Phase 2
+  enabled: false
   provider: mistral
   confidence_floor: 0.85
 
 notion:
-  enabled: false        # digest wired up in Phase 1c
+  enabled: false
   parent_page: "Personal/Mail System/Weekly Digest"
+
+safety:
+  max_mutations: null
+  max_archives: null
+  max_archive_fraction: null
+  max_scan_age_minutes: null
+  protected_label_prefixes:
+    - Administratie/Loonstrook
+    - Beleggen
+    - hypotheek
+  protected_subject_contains:
+    - loonstrook
+    - salarisspecificatie
+    - transactie
+    - afschrijving
+    - factuur
+    - security alert
+    - beveiligingswaarschuwing
+    - hypotheek
+    - boarding pass
+    - boardingpas
+    - vluchtwijziging
+  protected_subject_regex: []

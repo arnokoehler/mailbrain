@@ -3,7 +3,9 @@
 Only messages where the given run actually added the label are touched, so
 labels the user set by hand are left alone. Usage:
 
-    uv run python scripts/unlabel.py <run-id> <label-name> <sender-domain> [--apply]
+    uv run python scripts/unlabel.py <run-id> <label-name> <sender-domain>
+
+Write mode is disabled; use ``mailbrain rollback`` for audited repair.
 """
 
 from __future__ import annotations
@@ -13,14 +15,11 @@ import sys
 
 from sqlalchemy import select
 
-from mailbrain.gmail.auth import build_service, load_credentials
-from mailbrain.gmail.client import GmailClient
 from mailbrain.labels import name_to_id
-from mailbrain.paths import credentials_path, db_path, token_path
+from mailbrain.locking import LockUnavailableError, process_lock
+from mailbrain.paths import db_path
 from mailbrain.storage.db import session_factory
 from mailbrain.storage.models import Message, Mutation
-
-BATCH_SIZE = 1000
 
 
 def added_by_run(session, run_id: int, label: str, domain: str) -> list[str]:
@@ -49,28 +48,25 @@ def main() -> None:
         raise SystemExit(2)
     run_id, label, domain = int(args[0]), args[1], args[2]
     live = "--apply" in sys.argv
+    if live:
+        print(
+            "write mode is disabled; use 'mailbrain rollback' so safety, audit, "
+            "and live checks apply"
+        )
+        raise SystemExit(2)
 
-    factory = session_factory(db_path())
-    with factory() as session:
-        targets = added_by_run(session, run_id, label, domain)
-        label_id = name_to_id(session).get(label)
+    try:
+        with process_lock():
+            factory = session_factory(db_path())
+            with factory() as session:
+                targets = added_by_run(session, run_id, label, domain)
+                label_id = name_to_id(session).get(label)
+    except LockUnavailableError as error:
+        print(error)
+        raise SystemExit(2) from error
 
     print(f"run {run_id}: {len(targets)} messages from @{domain} got '{label}' (id {label_id})")
-    if not live:
-        print("dry run - pass --apply to remove the label in Gmail")
-        return
-    if label_id is None:
-        raise SystemExit(f"label '{label}' not found in the local label cache")
-
-    client = GmailClient(build_service(load_credentials(credentials_path(), token_path())))
-    for start in range(0, len(targets), BATCH_SIZE):
-        batch = targets[start : start + BATCH_SIZE]
-        client.batch_modify(message_ids=batch, add_label_ids=[], remove_label_ids=[label_id])
-
-    with factory() as session:
-        strip_from_cache(session, targets, label_id)
-        session.commit()
-    print(f"removed '{label}' from {len(targets)} messages and synced the cache")
+    print("read-only analysis; write mode is disabled")
 
 
 if __name__ == "__main__":

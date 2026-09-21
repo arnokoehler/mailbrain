@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock
 
+import pytest
+
 from mailbrain.gmail.client import GmailClient
 
 
@@ -103,3 +105,71 @@ def test_list_labels_empty_response():
     service.users.return_value.labels.return_value.list.return_value.execute.return_value = {}
     client = GmailClient(service)
     assert client.list_labels() == {}
+
+
+class HttpFailure(Exception):
+    def __init__(self, status, reason=None):
+        self.resp = type("Resp", (), {"status": status})()
+        self.content = (
+            f'{{"error":{{"errors":[{{"reason":"{reason}"}}]}}}}'.encode()
+            if reason
+            else b"{}"
+        )
+
+
+@pytest.mark.parametrize("method", ["list_message_ids", "get_metadata", "list_labels"])
+def test_reads_retry_transport_failures(method):
+    service = MagicMock()
+    messages_api = service.users.return_value.messages.return_value
+    labels_api = service.users.return_value.labels.return_value
+    messages_api.list_next.return_value = None
+    messages_api.list.return_value.execute.side_effect = [TimeoutError(), {}]
+    messages_api.get.return_value.execute.side_effect = [TimeoutError(), {"id": "m1"}]
+    labels_api.list.return_value.execute.side_effect = [TimeoutError(), {}]
+    client = GmailClient(service, sleep=lambda _: None)
+
+    if method == "list_message_ids":
+        client.list_message_ids("in:inbox")
+        execute = messages_api.list.return_value.execute
+    elif method == "get_metadata":
+        client.get_metadata("m1")
+        execute = messages_api.get.return_value.execute
+    else:
+        client.list_labels()
+        execute = labels_api.list.return_value.execute
+
+    assert execute.call_count == 2
+
+
+def test_read_retries_are_bounded():
+    service = MagicMock()
+    execute = service.users.return_value.labels.return_value.list.return_value.execute
+    execute.side_effect = HttpFailure(503)
+    client = GmailClient(service, sleep=lambda _: None)
+
+    with pytest.raises(HttpFailure):
+        client.list_labels()
+
+    assert execute.call_count == 5
+
+
+def test_rate_limit_403_is_retried():
+    service = MagicMock()
+    execute = service.users.return_value.labels.return_value.list.return_value.execute
+    execute.side_effect = [HttpFailure(403, "rateLimitExceeded"), {}]
+    client = GmailClient(service, sleep=lambda _: None)
+
+    assert client.list_labels() == {}
+    assert execute.call_count == 2
+
+
+def test_permanent_auth_403_is_not_retried():
+    service = MagicMock()
+    execute = service.users.return_value.labels.return_value.list.return_value.execute
+    execute.side_effect = HttpFailure(403, "forbidden")
+    client = GmailClient(service, sleep=lambda _: None)
+
+    with pytest.raises(HttpFailure):
+        client.list_labels()
+
+    assert execute.call_count == 1

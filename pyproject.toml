@@ -12,6 +12,7 @@ dependencies = [
     "google-api-python-client>=2.130",
     "google-auth-oauthlib>=1.2",
     "google-auth>=2.29",
+    "alembic>=1.19.2",
 ]
 
 [project.scripts]

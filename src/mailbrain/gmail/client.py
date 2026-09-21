@@ -6,7 +6,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from mailbrain.gmail.backoff import with_backoff
+from mailbrain.gmail.backoff import is_retryable_read, with_backoff
 
 USER_ID = "me"
 _METADATA_HEADERS = ["From", "Subject"]
@@ -15,16 +15,26 @@ _METADATA_HEADERS = ["From", "Subject"]
 class GmailClient:
     """Gmail access used by the scanner and applier. I/O boundary — mock in tests."""
 
-    def __init__(self, service: Any, sleep: Callable[[float], None] = time.sleep) -> None:
+    def __init__(
+        self,
+        service: Any,
+        sleep: Callable[[float], None] = time.sleep,
+        page_size: int = 500,
+    ) -> None:
         self._service = service
         self._sleep = sleep
+        self._page_size = page_size
 
     def list_message_ids(self, query: str) -> list[str]:
         api = self._service.users().messages()
         ids: list[str] = []
-        request = api.list(userId=USER_ID, q=query)
+        request = api.list(userId=USER_ID, q=query, maxResults=self._page_size)
         while request is not None:
-            response = request.execute()
+            response = with_backoff(
+                request.execute,
+                sleep=self._sleep,
+                is_retryable=is_retryable_read,
+            )
             ids.extend(m["id"] for m in response.get("messages", []))
             request = api.list_next(request, response)
         return ids
@@ -38,12 +48,17 @@ class GmailClient:
           internal_date_ms: int (epoch milliseconds).
         """
         api = self._service.users().messages()
-        msg = api.get(
+        request = api.get(
             userId=USER_ID,
             id=message_id,
             format="metadata",
             metadataHeaders=_METADATA_HEADERS,
-        ).execute()
+        )
+        msg = with_backoff(
+            request.execute,
+            sleep=self._sleep,
+            is_retryable=is_retryable_read,
+        )
         headers = {
             h["name"].lower(): h["value"]
             for h in msg.get("payload", {}).get("headers", [])
@@ -59,7 +74,12 @@ class GmailClient:
         }
 
     def list_labels(self) -> dict[str, str]:
-        response = self._service.users().labels().list(userId=USER_ID).execute()
+        request = self._service.users().labels().list(userId=USER_ID)
+        response = with_backoff(
+            request.execute,
+            sleep=self._sleep,
+            is_retryable=is_retryable_read,
+        )
         return {lbl["id"]: lbl["name"] for lbl in response.get("labels", [])}
 
     def create_label(self, name: str) -> str:
@@ -69,10 +89,7 @@ class GmailClient:
             "labelListVisibility": "labelShow",
             "messageListVisibility": "show",
         }
-        created = with_backoff(
-            lambda: self._service.users().labels().create(userId=USER_ID, body=body).execute(),
-            sleep=self._sleep,
-        )
+        created = self._service.users().labels().create(userId=USER_ID, body=body).execute()
         return created["id"]  # type: ignore[no-any-return]
 
     def batch_modify(
@@ -87,10 +104,4 @@ class GmailClient:
             "addLabelIds": add_label_ids,
             "removeLabelIds": remove_label_ids,
         }
-        with_backoff(
-            lambda: self._service.users()
-            .messages()
-            .batchModify(userId=USER_ID, body=body)
-            .execute(),
-            sleep=self._sleep,
-        )
+        self._service.users().messages().batchModify(userId=USER_ID, body=body).execute()

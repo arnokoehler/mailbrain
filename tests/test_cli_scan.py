@@ -21,10 +21,11 @@ def test_scan_wires_auth_client_and_scanner(monkeypatch, tmp_path):
 
     captured: dict[str, object] = {}
 
-    def fake_scan(client, query, factory, skip_cached=False):
+    def fake_scan(client, query, factory, batch_size=200, skip_cached=False):
         captured["query"] = query
         captured["client"] = client
         captured["skip_cached"] = skip_cached
+        captured["batch_size"] = batch_size
         return 7
 
     monkeypatch.setattr(cli, "scan_mailbox", fake_scan)
@@ -34,6 +35,7 @@ def test_scan_wires_auth_client_and_scanner(monkeypatch, tmp_path):
     assert captured["query"] == "in:inbox"
     assert "7" in result.output
     assert captured["client"] is not None
+    assert captured["batch_size"] == 1000
 
 
 def test_scan_missing_credentials_errors(monkeypatch, tmp_path):

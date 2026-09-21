@@ -41,27 +41,30 @@ class _Http429(Exception):
         self.resp = type("Resp", (), {"status": 429})()
 
 
-def test_batch_modify_retries_on_transient_error():
+def test_batch_modify_does_not_retry_on_transient_error():
     service = MagicMock()
     execute = service.users.return_value.messages.return_value.batchModify.return_value.execute
     execute.side_effect = [_Http429(), None]  # fail once (429), then succeed
     client = GmailClient(service, sleep=lambda _: None)
 
-    client.batch_modify(["m1"], add_label_ids=["L1"], remove_label_ids=[])
+    import pytest
 
-    assert execute.call_count == 2
+    with pytest.raises(_Http429):
+        client.batch_modify(["m1"], add_label_ids=["L1"], remove_label_ids=[])
+    assert execute.call_count == 1
 
 
-def test_create_label_retries_on_transient_error():
+def test_create_label_does_not_retry_on_transient_error():
     service = MagicMock()
     execute = service.users.return_value.labels.return_value.create.return_value.execute
     execute.side_effect = [_Http429(), {"id": "Label_9"}]
     client = GmailClient(service, sleep=lambda _: None)
 
-    result = client.create_label("Reizen")
+    import pytest
 
-    assert result == "Label_9"
-    assert execute.call_count == 2
+    with pytest.raises(_Http429):
+        client.create_label("Reizen")
+    assert execute.call_count == 1
 
 
 def test_batch_modify_gives_up_on_non_retryable():

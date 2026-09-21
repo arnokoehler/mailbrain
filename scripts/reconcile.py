@@ -6,30 +6,29 @@ re-runs the current rules and drops any label that run added but no rule
 justifies any more. Labels the user set by hand are never touched, because only
 labels absent from `labels_before` are considered.
 
-    uv run python scripts/reconcile.py <run-id> [--apply]
+    uv run python scripts/reconcile.py <run-id>
+
+Write mode is disabled; use ``mailbrain rollback`` for audited repair.
 """
 
 from __future__ import annotations
 
 import json
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy import select
 
 from mailbrain.config import load_rules
-from mailbrain.gmail.auth import build_service, load_credentials
-from mailbrain.gmail.client import GmailClient
 from mailbrain.labels import name_to_id
-from mailbrain.paths import credentials_path, db_path, token_path
+from mailbrain.locking import LockUnavailableError, process_lock
+from mailbrain.paths import db_path
 from mailbrain.rules.engine import rule_matches
 from mailbrain.rules.models import MessageMeta
 from mailbrain.storage.db import session_factory
 from mailbrain.storage.models import Label, Message, Mutation
-
-BATCH_SIZE = 1000
 
 
 def unjustified_archives(session, run_id: int) -> list[str]:
@@ -128,12 +127,23 @@ def main() -> None:
         raise SystemExit(2)
     run_id = int(positional[0])
     live = "--apply" in sys.argv
+    if live:
+        print(
+            "write mode is disabled; use 'mailbrain rollback' so safety, audit, "
+            "and live checks apply"
+        )
+        raise SystemExit(2)
 
-    factory = session_factory(db_path())
-    with factory() as session:
-        stale = stale_labels(session, run_id)
-        unarchive = unjustified_archives(session, run_id)
-        label_ids = name_to_id(session)
+    try:
+        with process_lock():
+            factory = session_factory(db_path())
+            with factory() as session:
+                stale = stale_labels(session, run_id)
+                unarchive = unjustified_archives(session, run_id)
+                label_ids = name_to_id(session)
+    except LockUnavailableError as error:
+        print(error)
+        raise SystemExit(2) from error
 
     by_label: Counter[str] = Counter()
     for labels in stale.values():
@@ -144,47 +154,7 @@ def main() -> None:
         known = "" if label in label_ids else "  (not in label cache - skipped)"
         print(f"{count:5d}  {label}{known}")
     print(f"\n{len(unarchive)} messages archived by this run that no rule would archive now")
-    if not live:
-        print("\ndry run - pass --apply to repair these in Gmail")
-        return
-
-    if unarchive:
-        client = GmailClient(build_service(load_credentials(credentials_path(), token_path())))
-        for start in range(0, len(unarchive), BATCH_SIZE):
-            batch = unarchive[start : start + BATCH_SIZE]
-            client.batch_modify(message_ids=batch, add_label_ids=["INBOX"], remove_label_ids=[])
-        with factory() as session:
-            for row in session.scalars(select(Message).where(Message.gmail_id.in_(unarchive))):
-                labels = json.loads(row.label_ids or "[]")
-                if "INBOX" not in labels:
-                    row.label_ids = json.dumps([*labels, "INBOX"])
-            session.commit()
-        print(f"restored {len(unarchive)} messages to the inbox")
-
-    per_label: dict[str, list[str]] = defaultdict(list)
-    for gmail_id, labels in stale.items():
-        for label in labels:
-            if label in label_ids:
-                per_label[label].append(gmail_id)
-
-    client = GmailClient(build_service(load_credentials(credentials_path(), token_path())))
-    removed = 0
-    for label, message_ids in per_label.items():
-        gmail_label = label_ids[label]
-        for start in range(0, len(message_ids), BATCH_SIZE):
-            batch = message_ids[start : start + BATCH_SIZE]
-            client.batch_modify(
-                message_ids=batch, add_label_ids=[], remove_label_ids=[gmail_label]
-            )
-        removed += len(message_ids)
-
-        with factory() as session:
-            for row in session.scalars(select(Message).where(Message.gmail_id.in_(message_ids))):
-                kept = [lid for lid in json.loads(row.label_ids or "[]") if lid != gmail_label]
-                row.label_ids = json.dumps(kept)
-            session.commit()
-
-    print(f"\nremoved {removed} label assignments and synced the cache")
+    print("\nread-only analysis; write mode is disabled")
 
 
 if __name__ == "__main__":
