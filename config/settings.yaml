@@ -6,11 +6,15 @@ gmail:
 ai:
   enabled: false
   provider: mistral
+  model: mistral-small-latest
+  api_key_env: MISTRAL_API_KEY
+  max_digest_messages: 100
   confidence_floor: 0.85
 
 notion:
   enabled: false
-  parent_page: "Personal/Mail System/Weekly Digest"
+  parent_page_id: "39a840ba5dab8129a775ccb343e24bee"
+  token_env: NOTION_TOKEN
 
 safety:
   max_mutations: null

@@ -19,6 +19,7 @@ BASELINE_REVISION = "0001_baseline"
 SCAN_LIFECYCLE_REVISION = "0002_scan_lifecycle"
 DURABLE_EXECUTION_REVISION = "0003_durable_execution"
 RECOVERY_PROOF_REVISION = "0004_recovery_proof"
+DIGEST_PUBLICATION_REVISION = "0005_digest_publication_state"
 
 
 class SchemaError(RuntimeError):
@@ -259,6 +260,13 @@ def _revision_columns(revision: str) -> dict[str, set[str]]:
     if revision == RECOVERY_PROOF_REVISION:
         expected["mutations"].add("reconciled_at")
         expected["label_creation_intents"].add("reconciled_at")
+        return expected
+    if revision == DIGEST_PUBLICATION_REVISION:
+        expected["mutations"].add("reconciled_at")
+        expected["label_creation_intents"].add("reconciled_at")
+        expected["digests"].update(
+            {"status", "last_error", "last_attempt_at", "published_at"}
+        )
         return expected
     raise UnknownSchemaError(f"unsupported database revision {revision}")
 

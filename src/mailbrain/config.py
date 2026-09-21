@@ -34,6 +34,9 @@ class AISettings(BaseModel):
 
     enabled: bool = False
     provider: str = "mistral"
+    model: str = "mistral-small-latest"
+    api_key_env: str = "MISTRAL_API_KEY"
+    max_digest_messages: PositiveStrictInt = 100
     confidence_floor: float = 0.85
 
 
@@ -41,7 +44,15 @@ class NotionSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     enabled: bool = False
-    parent_page: str = "Personal/Mail System/Weekly Digest"
+    parent_page_id: str | None = None
+    token_env: str = "NOTION_TOKEN"
+
+    @field_validator("parent_page_id", "token_env")
+    @classmethod
+    def _validate_notion_values(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("Notion settings must not be empty")
+        return value
 
 
 class SafetySettings(BaseModel):

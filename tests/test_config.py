@@ -14,6 +14,8 @@ def test_settings_defaults_from_empty_yaml(tmp_path):
     assert s.ai.provider == "mistral"
     assert s.ai.confidence_floor == 0.85
     assert s.notion.enabled is False
+    assert s.notion.parent_page_id is None
+    assert s.notion.token_env == "NOTION_TOKEN"
     assert s.safety.max_mutations is None
 
 
@@ -24,6 +26,29 @@ def test_settings_override(tmp_path):
     assert s.gmail.page_size == 100
     assert s.ai.confidence_floor == 0.9
     assert s.gmail.batch_size == 1000
+
+
+def test_notion_settings_use_page_id_and_environment_token(tmp_path):
+    p = tmp_path / "settings.yaml"
+    p.write_text(
+        "notion:\n"
+        "  enabled: true\n"
+        "  parent_page_id: abc123\n"
+        "  token_env: MAILBRAIN_NOTION_TOKEN\n"
+    )
+
+    settings = config.load_settings(p)
+
+    assert settings.notion.parent_page_id == "abc123"
+    assert settings.notion.token_env == "MAILBRAIN_NOTION_TOKEN"
+
+
+def test_notion_settings_reject_legacy_parent_path(tmp_path):
+    p = tmp_path / "settings.yaml"
+    p.write_text("notion:\n  parent_page: Personal/Mail System/Weekly Digest\n")
+
+    with pytest.raises(ValidationError):
+        config.load_settings(p)
 
 
 def test_load_rules(tmp_path):

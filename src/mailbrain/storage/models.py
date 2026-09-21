@@ -160,11 +160,21 @@ class LabelCreationIntent(Base):
 
 class Digest(Base):
     __tablename__ = "digests"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'failed', 'uncertain', 'published')",
+            name="ck_digests_status",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     iso_week: Mapped[str] = mapped_column(unique=True)  # one digest per ISO week, e.g. "2026-W28"
     notion_page_id: Mapped[str | None] = mapped_column(default=None)
     created_at: Mapped[datetime | None] = mapped_column(default=None)
+    status: Mapped[str] = mapped_column(default="pending", server_default="pending")
+    last_error: Mapped[str | None] = mapped_column(default=None)
+    last_attempt_at: Mapped[datetime | None] = mapped_column(default=None)
+    published_at: Mapped[datetime | None] = mapped_column(default=None)
 
 
 class ReviewQueue(Base):

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 from collections.abc import Callable
 from contextlib import nullcontext
 from datetime import UTC, datetime
@@ -19,9 +20,18 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mailbrain import config, paths
 from mailbrain.apply import assert_no_unresolved_intents, execute_plan
+from mailbrain.digest import (
+    build_digest,
+    current_iso_week,
+    load_week_messages,
+    mistral_summarizer,
+    parse_iso_week,
+    render_markdown,
+)
 from mailbrain.gmail.auth import build_service, load_credentials
 from mailbrain.gmail.client import GmailClient
 from mailbrain.locking import LockUnavailableError, process_lock
+from mailbrain.notion import DigestPublisher, NotionClient, UrllibHttpTransport
 from mailbrain.planner import PlannedMutation, plan_mutations
 from mailbrain.report import (
     render_metrics,
@@ -153,6 +163,16 @@ def _config_hash(value: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _write_report(destination: Path, content: str) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(f".{destination.name}.tmp")
+    try:
+        temporary.write_text(content)
+        temporary.replace(destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
 def _render_plan(
     plans: list[PlannedMutation],
     messages: list[MessageMeta],
@@ -251,6 +271,109 @@ def scan(
             skip_cached=resume,
         )
         console.print(f"[green]Scanned and cached[/] {count} messages")
+
+    _run_locked(action)
+
+
+@app.command()
+def digest(
+    week: str | None = typer.Option(None, "--week", help="ISO week, for example 2026-W38."),
+    rules: Path = typer.Option(  # noqa: B008
+        DEFAULT_RULES, "--rules", help="Path to rules YAML."
+    ),
+    settings_path: Path = typer.Option(  # noqa: B008
+        DEFAULT_SETTINGS, "--settings", help="Path to settings YAML."
+    ),
+    output: Path | None = typer.Option(  # noqa: B008
+        None, "--output", help="Markdown output path."
+    ),
+    retry_uncertain: bool = typer.Option(
+        False,
+        "--retry-uncertain",
+        help="Create after reconciliation cannot find an earlier uncertain page.",
+    ),
+) -> None:
+    """Generate a weekly newsletter digest from locally cached Gmail metadata."""
+    if not rules.exists():
+        _fail(f"Rules file not found: {rules}")
+    settings = _settings(settings_path)
+
+    def action() -> None:
+        selected_week = week or current_iso_week()
+        try:
+            normalized_week, start, end = parse_iso_week(selected_week)
+        except ValueError as error:
+            _fail(str(error))
+        summarizer = None
+        ai_generated = False
+        if settings.ai.enabled:
+            try:
+                summarizer = mistral_summarizer(settings.ai)
+            except ValueError as error:
+                console.print(
+                    f"[yellow]Mistral unavailable; using deterministic digest:[/] {error}"
+                )
+        messages = load_week_messages(_factory(), start, end)
+        loaded_rules = config.load_rules(rules).rules
+        try:
+            weekly_digest = build_digest(normalized_week, messages, loaded_rules, summarizer)
+            ai_generated = summarizer is not None
+        except (
+            OSError,
+            TimeoutError,
+            KeyError,
+            IndexError,
+            TypeError,
+            json.JSONDecodeError,
+            ValueError,
+        ) as error:
+            console.print(f"[yellow]Mistral failed; using deterministic digest:[/] {error}")
+            weekly_digest = build_digest(normalized_week, messages, loaded_rules)
+        markdown = render_markdown(weekly_digest)
+        destination = output or paths.reports_dir() / f"{normalized_week}.md"
+        _write_report(destination, markdown)
+        console.print(markdown, markup=False)
+        mode = "Mistral summary" if ai_generated else "deterministic overview"
+        console.print(f"[green]Wrote {mode}:[/] {destination}")
+        if not settings.notion.enabled:
+            return
+        if settings.notion.parent_page_id is None:
+            console.print(
+                "[yellow]Notion publishing skipped:[/] notion.parent_page_id is required"
+            )
+            return
+        token = os.environ.get(settings.notion.token_env)
+        if not token:
+            console.print(
+                f"[yellow]Notion publishing skipped:[/] {settings.notion.token_env} is required"
+            )
+            return
+        publisher = DigestPublisher(
+            _factory(),
+            NotionClient(token, UrllibHttpTransport()),
+            settings.notion.parent_page_id,
+        )
+        publication = publisher.publish(
+            normalized_week, markdown, retry_uncertain=retry_uncertain
+        )
+        if publication.status == "created":
+            target = publication.url or publication.page_id
+            console.print(f"[green]Published Notion digest {normalized_week}:[/] {target}")
+        elif publication.status == "recovered":
+            console.print(
+                f"[green]Recovered Notion digest {normalized_week} as page[/] "
+                f"{publication.page_id}"
+            )
+        elif publication.status == "already_published":
+            console.print(
+                f"Notion digest {normalized_week} is already published as page "
+                f"{publication.page_id}."
+            )
+        else:
+            console.print(
+                f"[yellow]Notion publication {publication.status}; local digest remains "
+                f"available:[/] {publication.error}"
+            )
 
     _run_locked(action)
 

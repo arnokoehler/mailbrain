@@ -14,7 +14,7 @@ from tests.storage.test_db import _create_legacy_database
 def test_fresh_database_reaches_packaged_head(tmp_path):
     path = tmp_path / "state.db"
     db.init_db(path)
-    assert db.current_revision(path) == db.RECOVERY_PROOF_REVISION
+    assert db.current_revision(path) == db.DIGEST_PUBLICATION_REVISION
     assert db.is_current_schema(path)
     assert set(inspect(db.make_engine(path)).get_table_names()) == {
         "alembic_version",
